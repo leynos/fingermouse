@@ -213,6 +213,7 @@ mod tests {
     use anyhow::{Result, anyhow};
     use futures::FutureExt;
     use futures::future::BoxFuture;
+    use rstest::rstest;
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -270,53 +271,59 @@ mod tests {
         }))
     }
 
+    #[rstest]
+    #[case::serves_user(Some("alice"), true, Some("Plan line"), "Test User", Some("Plan line"))]
+    #[case::rejects_unknown_user(Some("bob"), false, None, USER_MISSING, None)]
     #[tokio::test]
-    async fn serves_user_record() -> Result<()> {
-        let profile = build_profile("alice")?;
-        let record = UserRecord {
-            profile,
-            plan: Some("Plan line".to_string()),
+    async fn build_response_scenarios(
+        #[case] username: Option<&str>,
+        #[case] verbose: bool,
+        #[case] plan: Option<&str>,
+        #[case] expected_content: &str,
+        #[case] expected_plan: Option<&str>,
+    ) -> Result<()> {
+        let store = match username {
+            Some("alice") => {
+                let profile = build_profile("alice")?;
+                let record = UserRecord {
+                    profile,
+                    plan: plan.map(str::to_string),
+                };
+                Arc::new(StaticStore {
+                    record: Some(record),
+                })
+            }
+            _ => Arc::new(StaticStore { record: None }),
         };
-        let handler = ConnectionHandler {
-            config: base_config()?,
-            store: Arc::new(StaticStore {
-                record: Some(record),
-            }),
-            limiter: rate_limiter(),
-        };
-        let username = Username::parse("alice").map_err(|err| anyhow!(err))?;
-        let query = FingerQuery {
-            username,
-            host: None,
-            verbose: true,
-        };
-        let response = handler
-            .build_response(query, handler.config.default_host.clone())
-            .await;
-        let response = String::from_utf8(response)?;
-        assert!(response.contains("Test User"));
-        assert!(response.contains("Plan line"));
-        Ok(())
-    }
 
-    #[tokio::test]
-    async fn rejects_unknown_user() -> Result<()> {
         let handler = ConnectionHandler {
             config: base_config()?,
-            store: Arc::new(StaticStore { record: None }),
+            store,
             limiter: rate_limiter(),
         };
-        let username = Username::parse("bob").map_err(|err| anyhow!(err))?;
+
+        let username =
+            username.ok_or_else(|| anyhow!("username required for response scenario"))?;
+        let username = Username::parse(username).map_err(|err| anyhow!(err))?;
         let query = FingerQuery {
             username,
             host: None,
-            verbose: false,
+            verbose,
         };
         let response = handler
             .build_response(query, handler.config.default_host.clone())
             .await;
         let response = String::from_utf8(response)?;
-        assert!(response.contains(USER_MISSING));
+        assert!(
+            response.contains(expected_content),
+            "expected response to include '{expected_content}', got '{response}'"
+        );
+        if let Some(plan_fragment) = expected_plan {
+            assert!(
+                response.contains(plan_fragment),
+                "expected response to include plan snippet '{plan_fragment}'"
+            );
+        }
         Ok(())
     }
 }
