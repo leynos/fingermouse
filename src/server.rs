@@ -9,6 +9,7 @@ use tokio::time::timeout;
 use tracing::{info, warn};
 
 use crate::config::ServerConfig;
+use crate::framing::CrlfBuffer;
 use crate::identity::HostName;
 use crate::query::{self, FingerQuery};
 use crate::rate_limit::{RateLimitError, RateLimiter};
@@ -198,11 +199,9 @@ where
 }
 
 fn render_message(message: &str) -> Vec<u8> {
-    let mut line = message.to_string();
-    if !line.ends_with("\r\n") {
-        line.push_str("\r\n");
-    }
-    line.into_bytes()
+    let mut buffer = CrlfBuffer::with_capacity(message.len() + 2);
+    buffer.push_line(message);
+    buffer.into_bytes()
 }
 
 #[cfg(test)]

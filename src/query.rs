@@ -31,58 +31,46 @@ pub enum QueryError {
 }
 
 pub fn parse(line: &[u8]) -> Result<FingerQuery, QueryError> {
-    if line.is_empty() || !line.ends_with(b"\r\n") {
-        return Err(QueryError::MissingCrlf);
-    }
-    if line
-        .iter()
-        .any(|&b| matches!(b, 0x00..=0x1f) && b != b'\r' && b != b'\n')
+    let raw = std::str::from_utf8(line).map_err(|_| QueryError::ControlCharacter)?;
+    let raw = raw.strip_suffix("\r\n").ok_or(QueryError::MissingCrlf)?;
+
+    if raw
+        .bytes()
+        .any(|b| matches!(b, 0x00..=0x1f) && b != b'\r' && b != b'\n')
     {
         return Err(QueryError::ControlCharacter);
     }
 
-    let Some(raw_bytes) = line.get(..line.len().saturating_sub(2)) else {
-        return Err(QueryError::MissingCrlf);
+    let mut tokens = raw.split_whitespace();
+    let first = tokens.next().ok_or(QueryError::MissingUsername)?;
+
+    let (verbose, user_token) = match first.strip_prefix("/W") {
+        Some("") => (true, tokens.next().ok_or(QueryError::MissingUsername)?),
+        Some(rest) => (true, rest),
+        None => (false, first),
     };
-    let raw = std::str::from_utf8(raw_bytes).map_err(|_| QueryError::ControlCharacter)?;
 
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
+    if user_token.is_empty() {
         return Err(QueryError::MissingUsername);
     }
-
-    let (verbose, remainder) = trimmed.strip_prefix("/W").map_or((false, trimmed), |rest| {
-        let stripped = rest.trim_start_matches(' ');
-        (true, stripped)
-    });
-
-    if remainder.is_empty() {
-        return Err(QueryError::MissingUsername);
-    }
-
-    if remainder.starts_with('/') {
+    if user_token.starts_with('/') {
         return Err(QueryError::UnknownOption);
     }
 
-    let mut parts = remainder.split_whitespace();
-    let primary = parts
-        .next()
-        .ok_or(QueryError::MissingUsername)?
-        .trim_end_matches('@');
-    if parts.next().is_some() {
+    if tokens.next().is_some() {
         return Err(QueryError::TrailingInput);
     }
 
-    let mut host_split = primary.splitn(2, '@');
-    let user_part = host_split.next().unwrap_or_default();
-    if user_part.is_empty() {
+    let mut parts = user_token.splitn(2, '@');
+    let user = parts.next().unwrap_or_default();
+    if user.is_empty() {
         return Err(QueryError::MissingUsername);
     }
 
-    let username = Username::parse(user_part)
-        .map_err(|err| QueryError::InvalidUsername(format_error(&err)))?;
+    let username =
+        Username::parse(user).map_err(|err| QueryError::InvalidUsername(format_error(&err)))?;
 
-    let host = host_split
+    let host = parts
         .next()
         .map(|fragment| fragment.split('@').next().unwrap_or(""))
         .filter(|fragment| !fragment.is_empty())

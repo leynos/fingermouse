@@ -4,6 +4,7 @@ use std::fmt;
 use indexmap::IndexMap;
 use thiserror::Error;
 
+use crate::framing::CrlfBuffer;
 use crate::identity::Username;
 
 #[derive(Debug, Clone)]
@@ -102,12 +103,12 @@ pub struct ResponseBody {
 
 impl ResponseBody {
     pub fn as_bytes(&self) -> Vec<u8> {
-        let mut output = String::new();
+        let estimated = self.lines.iter().map(|line| line.len() + 2).sum::<usize>();
+        let mut buffer = CrlfBuffer::with_capacity(estimated);
         for line in &self.lines {
-            output.push_str(line);
-            output.push_str("\r\n");
+            buffer.push_line(line);
         }
-        output.into_bytes()
+        buffer.into_bytes()
     }
 }
 

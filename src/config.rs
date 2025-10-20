@@ -8,6 +8,7 @@ use clap::Parser;
 use object_store::ObjectStore;
 use object_store::local::LocalFileSystem;
 use std::sync::Arc;
+use tracing::warn;
 
 use crate::identity::{HostName, IdentityError};
 use crate::rate_limit::RateLimitSettings;
@@ -76,6 +77,23 @@ impl ServerConfig {
             window: Duration::from_secs(cli.rate_window_secs.max(1)),
         };
 
+        let max_request_bytes = {
+            const MIN: usize = 64;
+            const MAX: usize = 4096;
+            let original = cli.max_request_bytes;
+            let clamped = original.clamp(MIN, MAX);
+            if original != clamped {
+                warn!(
+                    original,
+                    allowed_min = MIN,
+                    allowed_max = MAX,
+                    clamped,
+                    "max_request_bytes outside allowed range; clamped",
+                );
+            }
+            clamped
+        };
+
         Ok(Self {
             listen: cli.listen,
             default_host,
@@ -85,7 +103,7 @@ impl ServerConfig {
             plan_prefix: sanitise_prefix(&cli.plan_prefix),
             rate,
             request_timeout: Duration::from_millis(cli.request_timeout_ms.max(1)),
-            max_request_bytes: cli.max_request_bytes.clamp(64, 4096),
+            max_request_bytes,
         })
     }
 

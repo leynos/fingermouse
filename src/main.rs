@@ -1,5 +1,6 @@
 //! fingermouse entrypoint.
 mod config;
+mod framing;
 mod identity;
 mod query;
 mod rate_limit;
