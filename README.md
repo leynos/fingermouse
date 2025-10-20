@@ -1,7 +1,7 @@
 # Fingermouse
 
-Fingermouse is a Tokio-based finger server that answers classic finger
-queries over TCP. User details are sourced from a TOML document hosted in an
+Fingermouse is a Tokio-based finger server that answers classic finger queries
+over TCP. User details are sourced from a TOML document hosted in an
 `object_store` backend, and optional `.plan` files are delivered when the
 client requests verbose output.
 
@@ -42,9 +42,9 @@ environment variables:
 - `--max-request-bytes` / `FINGERMOUSE_MAX_REQUEST_BYTES`: maximum accepted
   query size (default `512`).
 
-Profiles must expose a `username` key matching the requested account. All
-other string keys are returned verbatim as `Key: Value` pairs in the finger
-response. When `/W` is present, Fingermouse appends the user's plan, reports
+Profiles must expose a `username` key matching the requested account. All other
+string keys are returned verbatim as `Key: Value` pairs in the finger response.
+When `/W` is present, Fingermouse appends the user's plan, reports
 `(empty plan)` for blank files, or `(no plan)` when the plan is missing.
 
 ## Storage Layout
@@ -63,8 +63,8 @@ control sequences.
 
 ## Building
 
-Fingermouse uses crates that support static linking. To produce a `musl`
-binary for a scratch container, use `cargo zigbuild`:
+Fingermouse uses crates that support static linking. To produce a `musl` binary
+for a scratch container, use `cargo zigbuild`:
 
 ```bash
 cargo install cargo-zigbuild
@@ -72,8 +72,8 @@ cargo zigbuild --target x86_64-unknown-linux-musl --release
 ```
 
 The resulting binary in `target/x86_64-unknown-linux-musl/release` can be
-copied into a `FROM scratch` image together with the `profiles/` and
-`plans/` directories.
+copied into a `FROM scratch` image together with the `profiles/` and `plans/`
+directories.
 
 ## Testing
 
