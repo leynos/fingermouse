@@ -1,5 +1,5 @@
 //! Tokio-based finger server implementation.
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -78,36 +78,66 @@ where
     async fn serve(&self, stream: TcpStream, addr: SocketAddr) -> Result<()> {
         let remote_ip = addr.ip();
         let mut stream = stream;
-        if let Err(RateLimitError::LimitExceeded { retry_in }) = self.limiter.check(remote_ip).await
-        {
-            warn!(remote = %remote_ip, ?retry_in, "rate limit exceeded");
-            self.write_response(&mut stream, RATE_LIMIT_MESSAGE).await?;
-            stream.shutdown().await.ok();
+        if self.enforce_rate_limit(&mut stream, remote_ip).await? {
             return Ok(());
         }
 
-        let mut reader = BufReader::new(&mut stream);
-        let raw_request = self.read_request(&mut reader).await?;
-        drop(reader);
-        match query::parse(&raw_request) {
-            Ok(query) => {
-                let host = query
-                    .host
-                    .clone()
-                    .unwrap_or_else(|| self.config.default_host.clone());
-                let payload = self.build_response(query, host).await;
-                stream
-                    .write_all(&payload)
-                    .await
-                    .context("sending response")?;
+        let raw_request = self.read_query(&mut stream).await?;
+        if let Some(query) = self
+            .parse_query(&raw_request, remote_ip, &mut stream)
+            .await?
+        {
+            self.respond_to_query(&mut stream, query).await?;
+        }
+        stream.shutdown().await.ok();
+
+        Ok(())
+    }
+
+    async fn enforce_rate_limit(&self, stream: &mut TcpStream, remote_ip: IpAddr) -> Result<bool> {
+        match self.limiter.check(remote_ip).await {
+            Ok(()) => Ok(false),
+            Err(RateLimitError::LimitExceeded { retry_in }) => {
+                warn!(remote = %remote_ip, ?retry_in, "rate limit exceeded");
+                self.write_response(stream, RATE_LIMIT_MESSAGE).await?;
                 stream.shutdown().await.ok();
-            }
-            Err(err) => {
-                warn!(remote = %remote_ip, error = %err, "invalid query");
-                self.write_response(&mut stream, GENERIC_ERROR).await?;
+                Ok(true)
             }
         }
+    }
 
+    async fn read_query(&self, stream: &mut TcpStream) -> Result<Vec<u8>> {
+        let mut reader = BufReader::new(stream);
+        let request = self.read_request(&mut reader).await?;
+        Ok(request)
+    }
+
+    async fn parse_query(
+        &self,
+        raw_request: &[u8],
+        remote_ip: IpAddr,
+        stream: &mut TcpStream,
+    ) -> Result<Option<FingerQuery>> {
+        match query::parse(raw_request) {
+            Ok(query) => Ok(Some(query)),
+            Err(err) => {
+                warn!(remote = %remote_ip, error = %err, "invalid query");
+                self.write_response(stream, GENERIC_ERROR).await?;
+                Ok(None)
+            }
+        }
+    }
+
+    async fn respond_to_query(&self, stream: &mut TcpStream, query: FingerQuery) -> Result<()> {
+        let host = query
+            .host
+            .clone()
+            .unwrap_or_else(|| self.config.default_host.clone());
+        let payload = self.build_response(query, host).await;
+        stream
+            .write_all(&payload)
+            .await
+            .context("sending response")?;
         Ok(())
     }
 
