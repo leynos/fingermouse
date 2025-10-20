@@ -30,14 +30,15 @@ pub enum QueryError {
     InvalidHostname(String),
 }
 
+fn is_embedded_control_char(b: u8) -> bool {
+    matches!(b, 0x00..=0x1f) && b != b'\r' && b != b'\n'
+}
+
 pub fn parse(line: &[u8]) -> Result<FingerQuery, QueryError> {
     let raw = std::str::from_utf8(line).map_err(|_| QueryError::ControlCharacter)?;
     let raw = raw.strip_suffix("\r\n").ok_or(QueryError::MissingCrlf)?;
 
-    if raw
-        .bytes()
-        .any(|b| matches!(b, 0x00..=0x1f) && b != b'\r' && b != b'\n')
-    {
+    if raw.bytes().any(is_embedded_control_char) {
         return Err(QueryError::ControlCharacter);
     }
 
