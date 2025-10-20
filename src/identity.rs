@@ -66,18 +66,7 @@ impl HostName {
         let mut output = String::with_capacity(trimmed.len());
 
         for label in trimmed.split('.') {
-            if label.is_empty() {
-                return Err(IdentityError::HostEmptyLabel);
-            }
-            if label.starts_with('-') || label.ends_with('-') {
-                return Err(IdentityError::HostLabelHyphen);
-            }
-            if label
-                .chars()
-                .any(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '-'))
-            {
-                return Err(IdentityError::HostCharacters);
-            }
+            Self::validate_label(label)?;
 
             if !output.is_empty() {
                 output.push('.');
@@ -90,6 +79,24 @@ impl HostName {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl HostName {
+    fn validate_label(label: &str) -> Result<(), IdentityError> {
+        if label.is_empty() {
+            return Err(IdentityError::HostEmptyLabel);
+        }
+        if label.starts_with('-') || label.ends_with('-') {
+            return Err(IdentityError::HostLabelHyphen);
+        }
+        if label
+            .chars()
+            .any(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '-'))
+        {
+            return Err(IdentityError::HostCharacters);
+        }
+        Ok(())
     }
 }
 
