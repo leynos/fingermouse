@@ -1,0 +1,58 @@
+[package]
+name = "fingermouse"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.89"
+chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
+clap = { version = "4.5.6", features = ["derive", "env"] }
+futures = "0.3.30"
+indexmap = { version = "2.3.0", features = ["serde"] }
+mockable = { version = "0.1.4", default-features = false, features = ["clock", "mock"] }
+object_store = { version = "0.9.1", default-features = false }
+serde = { version = "1.0.210", features = ["derive"] }
+thiserror = "1.0.64"
+tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros", "net", "signal", "time", "io-util"] }
+toml = "0.8.19"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+rstest = "0.21.0"
+tempfile = "3.10.1"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+
+# 1. hygiene
+allow_attributes                    = "deny"
+allow_attributes_without_reason     = "deny"
+blanket_clippy_restriction_lints    = "deny"
+
+# 2. debugging leftovers
+dbg_macro       = "deny"
+print_stdout    = "deny"
+print_stderr    = "deny"
+
+# 3. panic-prone operations
+unwrap_used                     = "deny"
+expect_used                     = "deny"
+indexing_slicing                = "deny"
+string_slice                    = "deny"
+integer_division                = "deny"
+integer_division_remainder_used = "deny"
+
+# 4. portability
+host_endian_bytes   = "deny"
+little_endian_bytes = "deny"
+big_endian_bytes    = "deny"
+
+# 5. nursery idiom polish
+or_fun_call            = "deny"
+option_if_let_else     = "deny"
+use_self               = "deny"
+string_lit_as_bytes    = "deny"
+
+# 6. numerical foot-guns
+float_arithmetic = "deny"
