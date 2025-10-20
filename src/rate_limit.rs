@@ -132,19 +132,27 @@ mod tests {
             .collect()
     }
 
-    #[tokio::test]
-    async fn allows_requests_up_to_limit() -> Result<(), RateLimitError> {
+    fn setup_limiter_and_ip(
+        max_requests: u32,
+        window_secs: u64,
+        time_offsets: &[i64],
+        ip_str: &str,
+    ) -> Result<(RateLimiter, IpAddr), RateLimitError> {
         let settings = RateLimitSettings {
-            max_requests: 2,
-            window: Duration::from_secs(60),
+            max_requests,
+            window: Duration::from_secs(window_secs),
         };
         let limiter =
-            RateLimiter::with_clock(settings, ManualClock::from_times(timestamps(&[0, 0, 10])));
-        let ip: IpAddr = "192.0.2.1"
-            .parse()
-            .map_err(|_| RateLimitError::LimitExceeded {
-                retry_in: Duration::ZERO,
-            })?;
+            RateLimiter::with_clock(settings, ManualClock::from_times(timestamps(time_offsets)));
+        let ip: IpAddr = ip_str.parse().map_err(|_| RateLimitError::LimitExceeded {
+            retry_in: Duration::ZERO,
+        })?;
+        Ok((limiter, ip))
+    }
+
+    #[tokio::test]
+    async fn allows_requests_up_to_limit() -> Result<(), RateLimitError> {
+        let (limiter, ip) = setup_limiter_and_ip(2, 60, &[0, 0, 10], "192.0.2.1")?;
         limiter.check(ip).await?;
         limiter.check(ip).await?;
         Ok(())
@@ -172,17 +180,7 @@ mod tests {
 
     #[tokio::test]
     async fn resets_after_window() -> Result<(), RateLimitError> {
-        let settings = RateLimitSettings {
-            max_requests: 1,
-            window: Duration::from_secs(10),
-        };
-        let limiter =
-            RateLimiter::with_clock(settings, ManualClock::from_times(timestamps(&[0, 15])));
-        let ip: IpAddr = "203.0.113.5"
-            .parse()
-            .map_err(|_| RateLimitError::LimitExceeded {
-                retry_in: Duration::ZERO,
-            })?;
+        let (limiter, ip) = setup_limiter_and_ip(1, 10, &[0, 15], "203.0.113.5")?;
         limiter.check(ip).await?;
         limiter.check(ip).await?;
         Ok(())
