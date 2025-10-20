@@ -18,8 +18,8 @@ these rules to keep the documentation clear and consistent for developers.
   - suffix -ogue in words such as _analogue_ and _catalogue_,
   - and so forth.
 - The word **"outwith"** is acceptable.
-- Keep US spelling when used in an API, for example `color`.
-- The project licence file is spelled `LICENSE` for community consistency.
+- Keep US spelling when used in an API, for example, `color`.
+- The project uses the filename `LICENSE` for community consistency.
 
 ## Punctuation and grammar
 
@@ -108,7 +108,7 @@ pub fn add(a: i32, b: i32) -> i32 {
 Where it adds clarity, include [Mermaid](https://mermaid.js.org/) diagrams.
 When embedding figures, use `![alt text](path/to/image)` and provide brief alt
 text describing the content. Add a short description before each Mermaid
-diagram so screen readers can understand it.
+diagram, so screen readers can understand it.
 
 For screen readers: The following flowchart outlines the documentation workflow.
 
@@ -121,7 +121,7 @@ flowchart TD
 
 ## Roadmap Task Writing Guidelines
 
-When documenting development roadmap items, write them so that they are
+When documenting development roadmap items, write them, so that they are
 achievable, measurable, and structured. This ensures the roadmap functions as a
 practical planning tool rather than a vague wishlist. Do not commit to
 timeframes in the roadmap. Development effort should be roughly consistent from
@@ -137,7 +137,7 @@ task to task.
   migrated”).
 - Break into atomic increments: Ensure tasks can be completed in weeks, not
   quarters. Large goals should be decomposed into clear, deliverable units.
-- Tie to dependencies and sequencing: Document prerequisites so tasks can be
+- Tie to dependencies and sequencing: Document prerequisites, so tasks can be
   scheduled realistically (e.g. “Introduce central logging service” before “Add
   error dashboards”).
 - Bound scope explicitly: Note both in-scope and out-of-scope elements (e.g.

@@ -35,7 +35,7 @@ environment variables:
   `<username>.plan` files (default `plans`).
 - `--rate-limit` / `FINGERMOUSE_RATE_LIMIT`: permitted requests per
   window for each IP address (default `30`).
-- `--rate-window-secs` / `FINGERMOUSE_RATE_WINDOW_SECS`: length of the rate
+- `--rate-window-secs` / `FINGERMOUSE_RATE_WINDOW_SECS`: length of the rate-
   limiting window (default `60`).
 - `--request-timeout-ms` / `FINGERMOUSE_REQUEST_TIMEOUT_MS`: read timeout for
   client queries (default `3000`).
@@ -49,7 +49,7 @@ response. When `/W` is present, Fingermouse appends the user's plan, reports
 
 ## Storage Layout
 
-```
+```plaintext
 <store-root>/
   profiles/
     alice.toml
@@ -64,9 +64,9 @@ control sequences.
 ## Building
 
 Fingermouse uses crates that support static linking. To produce a `musl`
-binary for a scratch container use `cargo zigbuild`:
+binary for a scratch container, use `cargo zigbuild`:
 
-```
+```bash
 cargo install cargo-zigbuild
 cargo zigbuild --target x86_64-unknown-linux-musl --release
 ```
