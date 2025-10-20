@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint fmt check-fmt markdownlint nixie
+.PHONY: help all clean test build release lint fmt check-fmt check markdownlint nixie
 
 APP ?= fingermouse
 CARGO ?= cargo
@@ -23,6 +23,9 @@ target/%/$(APP): ## Build binary in debug or release mode
 
 lint: ## Run Clippy with warnings denied
 	$(CARGO) clippy $(CLIPPY_FLAGS)
+
+check: ## Run cargo check for fast no-link verification
+	$(CARGO) check --workspace --all-targets $(BUILD_JOBS)
 
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) fmt --all

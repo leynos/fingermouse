@@ -175,15 +175,15 @@ where
             }
             Err(RepositoryError::NotFound) => render_message(USER_MISSING),
             Err(RepositoryError::InvalidPlanEncoding) => {
-                warn!("invalid plan encoding for {}", query.username);
+                warn!(user = %query.username, "invalid plan encoding");
                 render_message(GENERIC_ERROR)
             }
             Err(RepositoryError::Parse(err)) => {
-                warn!("profile parse error for {}: {err}", query.username);
+                warn!(user = %query.username, error = %err, "profile parse error");
                 render_message(GENERIC_ERROR)
             }
             Err(RepositoryError::Other(err)) => {
-                warn!("unexpected backend error: {err}");
+                warn!(error = %err, "unexpected backend error");
                 render_message(GENERIC_ERROR)
             }
         }

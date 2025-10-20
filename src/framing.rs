@@ -35,11 +35,16 @@ pub fn trim_line_endings(line: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn trims_existing_line_endings() {
+    #[rstest]
+    #[case("status", b"status\r\n")]
+    #[case("status\r\n", b"status\r\n")]
+    #[case("status\r", b"status\r\n")]
+    #[case("status\n", b"status\r\n")]
+    fn push_line_normalises_endings(#[case] input: &str, #[case] expected: &[u8]) {
         let mut buf = CrlfBuffer::default();
-        buf.push_line("status\r\n");
-        assert_eq!(buf.into_bytes(), b"status\r\n");
+        buf.push_line(input);
+        assert_eq!(buf.into_bytes(), expected);
     }
 }

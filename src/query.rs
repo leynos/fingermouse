@@ -28,6 +28,8 @@ pub enum QueryError {
     InvalidUsername(String),
     #[error("invalid hostname: {0}")]
     InvalidHostname(String),
+    #[error("query contains invalid UTF-8")]
+    InvalidEncoding,
 }
 
 fn is_embedded_control_char(b: u8) -> bool {
@@ -35,7 +37,7 @@ fn is_embedded_control_char(b: u8) -> bool {
 }
 
 fn validate_input(line: &[u8]) -> Result<&str, QueryError> {
-    let raw = std::str::from_utf8(line).map_err(|_| QueryError::ControlCharacter)?;
+    let raw = std::str::from_utf8(line).map_err(|_| QueryError::InvalidEncoding)?;
     let raw = raw.strip_suffix("\r\n").ok_or(QueryError::MissingCrlf)?;
 
     if raw.bytes().any(is_embedded_control_char) {
@@ -59,13 +61,11 @@ fn parse_verbose_flag<'a>(
         Ok(token)
     };
 
-    match first.strip_prefix("/W") {
-        Some("") => {
-            let next = tokens.next().ok_or(QueryError::MissingUsername)?;
-            Ok((true, ensure_valid(next)?))
-        }
-        Some(rest) => Ok((true, ensure_valid(rest)?)),
-        None => Ok((false, ensure_valid(first)?)),
+    if first.eq_ignore_ascii_case("/W") {
+        let next = tokens.next().ok_or(QueryError::MissingUsername)?;
+        Ok((true, ensure_valid(next)?))
+    } else {
+        Ok((false, ensure_valid(first)?))
     }
 }
 
@@ -144,6 +144,8 @@ mod tests {
     #[case("/W alice", true, "alice", None)]
     #[case("/W    alice@example.com", true, "alice", Some("example.com"))]
     #[case("/W alice@example.com@other", true, "alice", Some("example.com"))]
+    #[case("/w alice", true, "alice", None)]
+    #[case("/w alice@example.com", true, "alice", Some("example.com"))]
     fn successful_parse(
         #[case] input: &str,
         #[case] verbose: bool,
@@ -166,6 +168,8 @@ mod tests {
     #[case("/x alice")]
     #[case("")]
     #[case("AL ice")]
+    #[case("/walice")]
+    #[case("/Walice@example.com")]
     fn invalid_queries(#[case] input: &str) {
         let line = to_line(input);
         assert!(parse(&line).is_err());

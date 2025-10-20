@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use thiserror::Error;
 
 use crate::framing::CrlfBuffer;
-use crate::identity::Username;
+use crate::identity::{IdentityError, Username};
 
 #[derive(Debug, Clone)]
 pub struct FingerProfile {
@@ -21,6 +21,8 @@ pub enum ProfileError {
     NonStringValue { key: String },
     #[error("profile declares mismatched username")]
     UsernameMismatch,
+    #[error("profile declares invalid username: {0}")]
+    UsernameInvalid(IdentityError),
     #[error("profile must declare a username field")]
     MissingUsername,
     #[error("profile data must be UTF-8 encoded")]
@@ -54,7 +56,7 @@ impl FingerProfile {
         }
 
         let declared = declared_username.ok_or(ProfileError::MissingUsername)?;
-        let parsed = Username::parse(&declared).map_err(|_| ProfileError::UsernameMismatch)?;
+        let parsed = Username::parse(&declared).map_err(ProfileError::UsernameInvalid)?;
         if parsed != username {
             return Err(ProfileError::UsernameMismatch);
         }
@@ -143,28 +145,104 @@ mod tests {
     use crate::identity::Username;
     use rstest::rstest;
 
-    #[rstest]
+    fn profile_bytes(body: &str) -> &[u8] {
+        body.as_bytes()
+    }
+
+    fn parse_username(input: &str) -> Username {
+        Username::parse(input)
+            .unwrap_or_else(|err| panic!("failed to parse username '{input}': {err}"))
+    }
+
+    fn expect_profile_error(username: Username, body: &str) -> ProfileError {
+        match FingerProfile::parse(username, profile_bytes(body)) {
+            Ok(_) => panic!("expected profile parsing to fail"),
+            Err(err) => err,
+        }
+    }
+
+    #[test]
     fn parses_profile() {
-        let username = match Username::parse("alice") {
-            Ok(value) => value,
-            Err(err) => panic!("username parse failed: {err}"),
-        };
-        let body = br#"
+        let username = parse_username("alice");
+        let body = r#"
             username = "alice"
             full_name = "Alice Smith"
             email = "alice@example.com"
         "#;
-        let profile = match FingerProfile::parse(username.clone(), body) {
-            Ok(value) => value,
-            Err(err) => panic!("profile parse failed: {err}"),
-        };
+        let profile = FingerProfile::parse(username.clone(), profile_bytes(body))
+            .unwrap_or_else(|err| panic!("profile parse failed: {err}"));
         let response = profile.render(false, None);
-        let text = match String::from_utf8(response.as_bytes()) {
-            Ok(value) => value,
-            Err(err) => panic!("utf8 conversion failed: {err}"),
-        };
+        let text = String::from_utf8(response.as_bytes())
+            .unwrap_or_else(|err| panic!("utf8 conversion failed: {err}"));
         assert!(text.contains("User: alice"));
         assert!(text.contains("Full name: Alice Smith"));
         assert!(text.contains("Email: alice@example.com"));
+    }
+
+    #[test]
+    fn rejects_mismatched_username() {
+        let username = parse_username("alice");
+        let body = r#"
+            username = "bob"
+            full_name = "Alice Smith"
+        "#;
+        let err = expect_profile_error(username, body);
+        assert!(matches!(err, ProfileError::UsernameMismatch));
+    }
+
+    #[test]
+    fn rejects_invalid_username_value() {
+        let username = parse_username("alice");
+        let body = r#"
+            username = "bad name"
+            full_name = "Alice Smith"
+        "#;
+        let err = expect_profile_error(username, body);
+        assert!(matches!(err, ProfileError::UsernameInvalid(_)));
+    }
+
+    #[test]
+    fn rejects_missing_username_field() {
+        let username = parse_username("alice");
+        let body = r#"
+            full_name = "Alice Smith"
+        "#;
+        let err = expect_profile_error(username, body);
+        assert!(matches!(err, ProfileError::MissingUsername));
+    }
+
+    #[test]
+    fn rejects_non_string_value() {
+        let username = parse_username("alice");
+        let body = r#"
+            username = "alice"
+            age = 42
+        "#;
+        let err = expect_profile_error(username, body);
+        assert!(matches!(err, ProfileError::NonStringValue { ref key } if key == "age"));
+    }
+
+    #[test]
+    fn rejects_invalid_toml() {
+        let username = parse_username("alice");
+        let body = "username = \"alice\"\nfull_name =";
+        let err = expect_profile_error(username, body);
+        assert!(matches!(err, ProfileError::Toml(_)));
+    }
+
+    #[rstest]
+    #[case(Some(""), "(empty plan)")]
+    #[case(None, "(no plan)")]
+    fn renders_plan_variants(#[case] plan: Option<&str>, #[case] expected: &str) {
+        let username = parse_username("alice");
+        let body = r#"
+            username = "alice"
+        "#;
+        let profile = FingerProfile::parse(username, profile_bytes(body))
+            .unwrap_or_else(|err| panic!("profile parse failed: {err}"));
+        let response = profile.render(true, plan);
+        let text = String::from_utf8(response.as_bytes())
+            .unwrap_or_else(|err| panic!("utf8 conversion failed: {err}"));
+        assert!(text.contains(expected));
     }
 }

@@ -84,10 +84,10 @@ impl ServerConfig {
             let clamped = original.clamp(MIN, MAX);
             if original != clamped {
                 warn!(
-                    original,
+                    original = original,
                     allowed_min = MIN,
                     allowed_max = MAX,
-                    clamped,
+                    clamped = clamped,
                     "max_request_bytes outside allowed range; clamped",
                 );
             }
