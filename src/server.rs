@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::timeout;
 use tracing::{info, warn};
@@ -116,10 +116,14 @@ where
         R: AsyncBufRead + Unpin,
     {
         let mut buffer = Vec::with_capacity(self.config.max_request_bytes);
-        let read_future = reader.read_until(b'\n', &mut buffer);
-        let amount = timeout(self.config.request_timeout, read_future)
-            .await
-            .context("request timeout")??;
+        let limit = (self.config.max_request_bytes + 1) as u64;
+        let mut limited = reader.take(limit);
+        let amount = timeout(
+            self.config.request_timeout,
+            limited.read_until(b'\n', &mut buffer),
+        )
+        .await
+        .context("request timeout")??;
         if amount == 0 {
             return Err(anyhow::anyhow!("connection closed"));
         }
