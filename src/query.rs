@@ -34,7 +34,7 @@ fn is_embedded_control_char(b: u8) -> bool {
     matches!(b, 0x00..=0x1f) && b != b'\r' && b != b'\n'
 }
 
-pub fn parse(line: &[u8]) -> Result<FingerQuery, QueryError> {
+fn validate_input(line: &[u8]) -> Result<&str, QueryError> {
     let raw = std::str::from_utf8(line).map_err(|_| QueryError::ControlCharacter)?;
     let raw = raw.strip_suffix("\r\n").ok_or(QueryError::MissingCrlf)?;
 
@@ -42,26 +42,34 @@ pub fn parse(line: &[u8]) -> Result<FingerQuery, QueryError> {
         return Err(QueryError::ControlCharacter);
     }
 
-    let mut tokens = raw.split_whitespace();
-    let first = tokens.next().ok_or(QueryError::MissingUsername)?;
+    Ok(raw)
+}
 
-    let (verbose, user_token) = match first.strip_prefix("/W") {
-        Some("") => (true, tokens.next().ok_or(QueryError::MissingUsername)?),
-        Some(rest) => (true, rest),
-        None => (false, first),
+fn parse_verbose_flag<'a>(
+    tokens: &mut impl Iterator<Item = &'a str>,
+    first: &'a str,
+) -> Result<(bool, &'a str), QueryError> {
+    let ensure_valid = |token: &'a str| -> Result<&'a str, QueryError> {
+        if token.is_empty() {
+            return Err(QueryError::MissingUsername);
+        }
+        if token.starts_with('/') {
+            return Err(QueryError::UnknownOption);
+        }
+        Ok(token)
     };
 
-    if user_token.is_empty() {
-        return Err(QueryError::MissingUsername);
+    match first.strip_prefix("/W") {
+        Some("") => {
+            let next = tokens.next().ok_or(QueryError::MissingUsername)?;
+            Ok((true, ensure_valid(next)?))
+        }
+        Some(rest) => Ok((true, ensure_valid(rest)?)),
+        None => Ok((false, ensure_valid(first)?)),
     }
-    if user_token.starts_with('/') {
-        return Err(QueryError::UnknownOption);
-    }
+}
 
-    if tokens.next().is_some() {
-        return Err(QueryError::TrailingInput);
-    }
-
+fn parse_user_host(user_token: &str) -> Result<(Username, Option<HostName>), QueryError> {
     let mut parts = user_token.splitn(2, '@');
     let user = parts.next().unwrap_or_default();
     if user.is_empty() {
@@ -79,6 +87,22 @@ pub fn parse(line: &[u8]) -> Result<FingerQuery, QueryError> {
             HostName::parse(fragment).map_err(|err| QueryError::InvalidHostname(format_error(&err)))
         })
         .transpose()?;
+
+    Ok((username, host))
+}
+
+pub fn parse(line: &[u8]) -> Result<FingerQuery, QueryError> {
+    let raw = validate_input(line)?;
+    let mut tokens = raw.split_whitespace();
+    let first = tokens.next().ok_or(QueryError::MissingUsername)?;
+
+    let (verbose, user_token) = parse_verbose_flag(&mut tokens, first)?;
+
+    if tokens.next().is_some() {
+        return Err(QueryError::TrailingInput);
+    }
+
+    let (username, host) = parse_user_host(user_token)?;
 
     Ok(FingerQuery {
         username,
