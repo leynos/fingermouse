@@ -81,7 +81,7 @@
 ## Refactoring Heuristics & Workflow
 
 - **Recognizing Refactoring Needs:** Regularly assess the codebase for potential
-  refactoring opportunities. Consider refactoring when you observe:
+  refactoring opportunities. Consider refactoring when observing:
   - **Long Methods/Functions:** Functions or methods that are excessively long
     or try to do too many things.
   - **Duplicated Code:** Identical or very similar code blocks appearing in
@@ -201,7 +201,7 @@ project:
   establishing a coherent internal convention that keeps trait forwarding
   consistent without per-type boilerplate. Combine approaches: lean on
   `newt-hype` for the common case, tuple structs for outliers, and
-  `the-newtype` to unify behaviour when you own the trait definitions.
+  `the-newtype` to unify behaviour when owning the trait definitions.
 
 ### Dependency Management
 

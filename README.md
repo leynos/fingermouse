@@ -58,7 +58,7 @@ When `/W` is present, Fingermouse appends the user's plan, reports
 ```
 
 Each profile TOML file must be UTF-8 and contain string values only. Plans are
-treated as UTF-8 text and sanitised to printable ASCII to avoid terminal
+treated as UTF-8 text and sanitized to printable ASCII to avoid terminal
 control sequences.
 
 ## Building

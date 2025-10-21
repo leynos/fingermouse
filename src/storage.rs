@@ -1,7 +1,6 @@
 //! Object store backed repository for finger user data.
 use std::sync::Arc;
 
-use anyhow::Result;
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use object_store::ObjectStore;
@@ -19,8 +18,11 @@ pub enum RepositoryError {
     Parse(#[from] ProfileError),
     #[error("plan is not valid UTF-8")]
     InvalidPlanEncoding,
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
+    #[error("storage backend error: {source}")]
+    Storage {
+        #[source]
+        source: object_store::Error,
+    },
 }
 
 #[cfg_attr(test, derive(Debug, Clone))]
@@ -34,7 +36,7 @@ pub trait UserStore: Send + Sync {
         &'a self,
         username: &'a Username,
         include_plan: bool,
-    ) -> BoxFuture<'a, Result<UserRecord, RepositoryError>>;
+    ) -> BoxFuture<'a, std::result::Result<UserRecord, RepositoryError>>;
 }
 
 #[derive(Clone)]
@@ -75,7 +77,7 @@ impl ObjectStoreUserStore {
         }
     }
 
-    async fn fetch_bytes(&self, path: &Path) -> Result<Vec<u8>, object_store::Error> {
+    async fn fetch_bytes(&self, path: &Path) -> std::result::Result<Vec<u8>, object_store::Error> {
         let result = self.store.get(path).await?;
         let bytes = result.bytes().await?;
         Ok(bytes.to_vec())
@@ -87,7 +89,7 @@ impl UserStore for ObjectStoreUserStore {
         &'a self,
         username: &'a Username,
         include_plan: bool,
-    ) -> BoxFuture<'a, Result<UserRecord, RepositoryError>> {
+    ) -> BoxFuture<'a, std::result::Result<UserRecord, RepositoryError>> {
         async move {
             let profile_path = self.profile_path(username);
             let bytes = match self.fetch_bytes(&profile_path).await {
@@ -95,7 +97,9 @@ impl UserStore for ObjectStoreUserStore {
                 Err(object_store::Error::NotFound { .. }) => {
                     return Err(RepositoryError::NotFound);
                 }
-                Err(err) => return Err(RepositoryError::Other(err.into())),
+                Err(err) => {
+                    return Err(RepositoryError::Storage { source: err });
+                }
             };
 
             let profile =
@@ -109,7 +113,9 @@ impl UserStore for ObjectStoreUserStore {
                             .map_err(|_| RepositoryError::InvalidPlanEncoding)?,
                     ),
                     Err(object_store::Error::NotFound { .. }) => None,
-                    Err(err) => return Err(RepositoryError::Other(err.into())),
+                    Err(err) => {
+                        return Err(RepositoryError::Storage { source: err });
+                    }
                 }
             } else {
                 None

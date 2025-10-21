@@ -182,8 +182,8 @@ where
                 warn!(user = %query.username, error = %err, "profile parse error");
                 render_message(GENERIC_ERROR)
             }
-            Err(RepositoryError::Other(err)) => {
-                warn!(error = %err, "unexpected backend error");
+            Err(RepositoryError::Storage { source }) => {
+                warn!(error = %source, "unexpected backend error");
                 render_message(GENERIC_ERROR)
             }
         }
@@ -272,18 +272,18 @@ mod tests {
     }
 
     #[rstest]
-    #[case::serves_user(Some("alice"), true, Some("Plan line"), "Test User", Some("Plan line"))]
-    #[case::rejects_unknown_user(Some("bob"), false, None, USER_MISSING, None)]
+    #[case::serves_user("alice", true, Some("Plan line"), "Test User", Some("Plan line"))]
+    #[case::rejects_unknown_user("bob", false, None, USER_MISSING, None)]
     #[tokio::test]
     async fn build_response_scenarios(
-        #[case] username: Option<&str>,
+        #[case] username: &str,
         #[case] verbose: bool,
         #[case] plan: Option<&str>,
         #[case] expected_content: &str,
         #[case] expected_plan: Option<&str>,
     ) -> Result<()> {
         let store = match username {
-            Some("alice") => {
+            "alice" => {
                 let profile = build_profile("alice")?;
                 let record = UserRecord {
                     profile,
@@ -302,8 +302,6 @@ mod tests {
             limiter: rate_limiter(),
         };
 
-        let username =
-            username.ok_or_else(|| anyhow!("username required for response scenario"))?;
         let username = Username::parse(username).map_err(|err| anyhow!(err))?;
         let query = FingerQuery {
             username,
