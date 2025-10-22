@@ -15,43 +15,65 @@ use crate::rate_limit::RateLimitSettings;
 
 #[derive(Debug, Parser)]
 #[command(name = "fingermouse")]
+/// Command-line options accepted by the fingermouse binary.
 pub struct CliOptions {
+    /// Address the server binds to.
     #[arg(long, env = "FINGERMOUSE_LISTEN", default_value = "0.0.0.0:7979")]
     pub listen: SocketAddr,
+    /// Default hostname used when a client query omits one.
     #[arg(long, env = "FINGERMOUSE_DEFAULT_HOST", default_value = "localhost")]
     pub default_host: String,
+    /// Optional comma-separated list of hostnames the server will answer.
     #[arg(long, env = "FINGERMOUSE_ALLOWED_HOSTS")]
     pub allowed_hosts: Option<String>,
+    /// Root directory used by the object store backend.
     #[arg(long, env = "FINGERMOUSE_STORE_ROOT", default_value = "./data")]
     pub store_root: PathBuf,
+    /// Relative path within the store containing profile TOML files.
     #[arg(long, env = "FINGERMOUSE_PROFILE_PREFIX", default_value = "profiles")]
     pub profile_prefix: String,
+    /// Relative path within the store containing plan files.
     #[arg(long, env = "FINGERMOUSE_PLAN_PREFIX", default_value = "plans")]
     pub plan_prefix: String,
+    /// Maximum number of requests allowed per window for a single client.
     #[arg(long, env = "FINGERMOUSE_RATE_LIMIT", default_value_t = 30)]
     pub rate_limit: u32,
+    /// Length of the rate-limiting window in seconds.
     #[arg(long, env = "FINGERMOUSE_RATE_WINDOW_SECS", default_value_t = 60)]
     pub rate_window_secs: u64,
+    /// Timeout in milliseconds for reading the client query line.
     #[arg(long, env = "FINGERMOUSE_REQUEST_TIMEOUT_MS", default_value_t = 3000)]
     pub request_timeout_ms: u64,
+    /// Maximum size of the accepted query line in bytes.
     #[arg(long, env = "FINGERMOUSE_MAX_REQUEST_BYTES", default_value_t = 512)]
     pub max_request_bytes: usize,
 }
 
 #[derive(Debug, Clone)]
+/// Runtime configuration compiled from CLI arguments and environment.
 pub struct ServerConfig {
+    /// Address the TCP listener binds to.
     pub listen: SocketAddr,
+    /// Default hostname used when queries omit one.
     pub default_host: HostName,
+    /// Hostnames that the server will respond to.
     pub allowed_hosts: Vec<HostName>,
+    /// Root directory used for the object store backend.
     pub store_root: PathBuf,
+    /// Subdirectory containing profile TOML files.
     pub profile_prefix: String,
+    /// Subdirectory containing plan files.
     pub plan_prefix: String,
+    /// Rate limiting settings applied per client IP.
     pub rate: RateLimitSettings,
+    /// Maximum time spent waiting for a client query.
     pub request_timeout: Duration,
+    /// Maximum query size accepted from a client.
     pub max_request_bytes: usize,
 }
 
 impl ServerConfig {
+    /// Construct configuration from parsed command-line options.
     pub fn from_cli(cli: CliOptions) -> Result<Self> {
         let default_host = HostName::parse(&cli.default_host)
             .map_err(|err| anyhow!("invalid default host: {}", describe_identity(&err)))?;
@@ -107,6 +129,7 @@ impl ServerConfig {
         })
     }
 
+    /// Create an object store instance rooted at the configured directory.
     pub fn build_store(&self) -> Result<Arc<dyn ObjectStore>> {
         ensure_directory(&self.store_root)?;
         let store = LocalFileSystem::new_with_prefix(&self.store_root)
@@ -115,6 +138,7 @@ impl ServerConfig {
         Ok(store)
     }
 
+    /// Determine whether the server is responsible for the supplied host.
     pub fn accepts_host(&self, host: &HostName) -> bool {
         self.allowed_hosts.contains(host)
     }

@@ -56,3 +56,7 @@ string_lit_as_bytes    = "deny"
 
 # 6. numerical foot-guns
 float_arithmetic = "deny"
+
+[lints.rust]
+missing_docs = "deny"
+missing_crate_level_docs = "deny"

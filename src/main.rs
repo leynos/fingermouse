@@ -1,4 +1,5 @@
 //! fingermouse entrypoint.
+#![deny(missing_docs, missing_crate_level_docs)]
 mod config;
 mod framing;
 mod identity;

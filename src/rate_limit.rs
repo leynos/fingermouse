@@ -11,12 +11,16 @@ use thiserror::Error;
 use tokio::sync::Mutex;
 
 #[derive(Debug, Clone)]
+/// Tunable rate limiting parameters.
 pub struct RateLimitSettings {
+    /// Maximum number of requests permitted during a single window.
     pub max_requests: u32,
+    /// Duration of the rolling window applied per client.
     pub window: Duration,
 }
 
 #[derive(Debug, Error)]
+/// Errors emitted when a client exceeds configured limits.
 pub enum RateLimitError {
     #[error("too many requests; retry in {retry_in:?}")]
     LimitExceeded { retry_in: Duration },
@@ -28,6 +32,7 @@ struct RateEntry {
     count: u32,
 }
 
+/// Asynchronous rate limiter with per-IP accounting.
 pub struct RateLimiter {
     clock: Arc<dyn Clock>,
     settings: RateLimitSettings,
@@ -44,10 +49,12 @@ impl std::fmt::Debug for RateLimiter {
 }
 
 impl RateLimiter {
+    /// Construct a limiter that uses the system clock for timing decisions.
     pub fn new(settings: RateLimitSettings) -> Self {
         Self::with_clock(settings, Arc::new(DefaultClock))
     }
 
+    /// Construct a limiter using an injected clock, enabling deterministic tests.
     pub fn with_clock(settings: RateLimitSettings, clock: Arc<dyn Clock>) -> Self {
         let window = chrono_duration(settings.window);
         Self {
@@ -58,6 +65,7 @@ impl RateLimiter {
         }
     }
 
+    /// Record an access for `ip`, enforcing the configured rate limits.
     pub async fn check(&self, ip: IpAddr) -> Result<(), RateLimitError> {
         let now = self.clock.utc();
         let mut guard = self.entries.lock().await;

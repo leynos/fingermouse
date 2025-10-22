@@ -8,12 +8,14 @@ use crate::framing::CrlfBuffer;
 use crate::identity::{IdentityError, Username};
 
 #[derive(Debug, Clone)]
+/// Parsed user profile loaded from the object store.
 pub struct FingerProfile {
     username: Username,
     attributes: IndexMap<String, String>,
 }
 
 #[derive(Debug, Error)]
+/// Errors returned when parsing or rendering user profiles.
 pub enum ProfileError {
     #[error("profile data must be a table of key/value pairs")]
     NotATable,
@@ -32,6 +34,7 @@ pub enum ProfileError {
 }
 
 impl FingerProfile {
+    /// Parse the provided payload into a [`FingerProfile`].
     pub fn parse(username: Username, payload: &[u8]) -> Result<Self, ProfileError> {
         let text = std::str::from_utf8(payload)?;
         let value: toml::Value = toml::from_str(text)?;
@@ -67,6 +70,7 @@ impl FingerProfile {
         })
     }
 
+    /// Render the profile and optional plan into a response body.
     pub fn render(&self, include_plan: bool, plan: Option<&str>) -> ResponseBody {
         let mut lines = Vec::with_capacity(self.attributes.len() + 4);
         lines.push(format!("User: {}", self.username.as_str()));
@@ -99,11 +103,13 @@ impl FingerProfile {
 }
 
 #[derive(Debug, Clone)]
+/// Textual response sent back to a finger client.
 pub struct ResponseBody {
     lines: Vec<String>,
 }
 
 impl ResponseBody {
+    /// Serialise the response body into CRLF-terminated bytes.
     pub fn as_bytes(&self) -> Vec<u8> {
         let estimated = self.lines.iter().map(|line| line.len() + 2).sum::<usize>();
         let mut buffer = CrlfBuffer::with_capacity(estimated);

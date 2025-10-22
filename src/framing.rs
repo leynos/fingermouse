@@ -14,7 +14,8 @@ impl CrlfBuffer {
         }
     }
 
-    /// Append a line ensuring it is terminated with CRLF without duplicating existing endings.
+    /// Append a line, ensuring it is terminated with CRLF without duplicating
+    /// existing endings.
     pub fn push_line(&mut self, line: &str) {
         let trimmed = trim_line_endings(line);
         self.bytes.extend_from_slice(trimmed.as_bytes());

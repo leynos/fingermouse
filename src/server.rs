@@ -20,6 +20,7 @@ const HOST_MISMATCH: &str = "fingermouse: host not served here";
 const RATE_LIMIT_MESSAGE: &str = "fingermouse: slow down";
 const USER_MISSING: &str = "fingermouse: no matching record";
 
+/// Tokio-based TCP server that answers finger protocol requests.
 pub struct FingerServer<S>
 where
     S: UserStore + 'static,
@@ -33,6 +34,7 @@ impl<S> FingerServer<S>
 where
     S: UserStore + 'static,
 {
+    /// Create a new server instance using the supplied components.
     pub fn new(config: Arc<ServerConfig>, store: Arc<S>, limiter: Arc<RateLimiter>) -> Self {
         Self {
             config,
@@ -41,6 +43,7 @@ where
         }
     }
 
+    /// Run the listener loop and spawn tasks for incoming connections.
     pub async fn run(self) -> Result<()> {
         let listener = TcpListener::bind(self.config.listen)
             .await

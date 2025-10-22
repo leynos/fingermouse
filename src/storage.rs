@@ -11,6 +11,7 @@ use crate::identity::Username;
 use crate::user::{FingerProfile, ProfileError};
 
 #[derive(Debug, Error)]
+/// Errors that may arise when retrieving user data from the backing store.
 pub enum RepositoryError {
     #[error("profile not found")]
     NotFound,
@@ -26,12 +27,16 @@ pub enum RepositoryError {
 }
 
 #[cfg_attr(test, derive(Debug, Clone))]
+/// Compound user record containing the parsed profile and optional plan.
 pub struct UserRecord {
     pub profile: FingerProfile,
     pub plan: Option<String>,
 }
 
+/// Abstraction over sources that provide finger user records.
 pub trait UserStore: Send + Sync {
+    /// Retrieve the user record for `username`, optionally including the plan
+    /// file.
     fn load_user<'a>(
         &'a self,
         username: &'a Username,
@@ -40,6 +45,7 @@ pub trait UserStore: Send + Sync {
 }
 
 #[derive(Clone)]
+/// [`UserStore`] implementation backed by an [`ObjectStore`].
 pub struct ObjectStoreUserStore {
     store: Arc<dyn ObjectStore>,
     profile_prefix: String,
@@ -47,6 +53,7 @@ pub struct ObjectStoreUserStore {
 }
 
 impl ObjectStoreUserStore {
+    /// Create a new repository rooted at the provided object store prefixes.
     pub fn new(
         store: Arc<dyn ObjectStore>,
         profile_prefix: impl Into<String>,

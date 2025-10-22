@@ -4,6 +4,7 @@ use std::fmt;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+/// Errors that may occur while parsing usernames or hostnames.
 pub enum IdentityError {
     #[error("username must be between 1 and {max} characters")]
     UsernameLength { max: usize },
@@ -20,11 +21,14 @@ pub enum IdentityError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Normalised, validated username.
 pub struct Username(String);
 
 impl Username {
     pub const MAX_LEN: usize = 32;
 
+    /// Parse the provided string into a [`Username`], enforcing allowed
+    /// characters and length restrictions.
     pub fn parse(input: &str) -> Result<Self, IdentityError> {
         let trimmed = input.trim();
         if trimmed.is_empty() || trimmed.len() > Self::MAX_LEN {
@@ -41,6 +45,7 @@ impl Username {
         }
     }
 
+    /// Borrow the underlying username as a string slice.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -53,11 +58,14 @@ impl fmt::Display for Username {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Normalised, validated hostname.
 pub struct HostName(String);
 
 impl HostName {
     pub const MAX_LEN: usize = 253;
 
+    /// Parse the provided string into a [`HostName`] value, ensuring each label
+    /// is well-formed.
     pub fn parse(input: &str) -> Result<Self, IdentityError> {
         let trimmed = input.trim();
         if trimmed.is_empty() || trimmed.len() > Self::MAX_LEN {
@@ -77,12 +85,15 @@ impl HostName {
         Ok(Self(output))
     }
 
+    /// Borrow the underlying hostname as a string slice.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
 impl HostName {
+    /// Validate that a hostname label follows the restrictions imposed by the
+    /// fingermouse server.
     fn validate_label(label: &str) -> Result<(), IdentityError> {
         if label.is_empty() {
             return Err(IdentityError::HostEmptyLabel);
