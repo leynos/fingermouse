@@ -78,7 +78,7 @@ impl ObjectStoreUserStore {
 
     fn join(prefix: &str, file: &str) -> Path {
         if prefix.is_empty() {
-            Path::from(file.to_string())
+            Path::from(file.to_owned())
         } else {
             Path::from(format!("{prefix}/{file}"))
         }
@@ -135,7 +135,7 @@ impl UserStore for ObjectStoreUserStore {
 }
 
 fn trim_slashes(input: impl AsRef<str>) -> String {
-    input.as_ref().trim_matches('/').to_string()
+    input.as_ref().trim_matches('/').to_owned()
 }
 
 #[cfg(test)]

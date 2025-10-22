@@ -132,9 +132,9 @@ impl ServerConfig {
     /// Create an object store instance rooted at the configured directory.
     pub fn build_store(&self) -> Result<Arc<dyn ObjectStore>> {
         ensure_directory(&self.store_root)?;
-        let store = LocalFileSystem::new_with_prefix(&self.store_root)
+        let fs_store = LocalFileSystem::new_with_prefix(&self.store_root)
             .context("failed to initialise object store")?;
-        let store: Arc<dyn ObjectStore> = Arc::new(store);
+        let store: Arc<dyn ObjectStore> = Arc::new(fs_store);
         Ok(store)
     }
 
@@ -160,7 +160,7 @@ fn ensure_directory(path: &Path) -> Result<()> {
 }
 
 fn sanitise_prefix(input: &str) -> String {
-    input.trim_matches('/').to_string()
+    input.trim_matches('/').to_owned()
 }
 
 fn describe_identity(err: &IdentityError) -> String {

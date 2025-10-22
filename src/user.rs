@@ -37,25 +37,25 @@ impl FingerProfile {
     /// Parse the provided payload into a [`FingerProfile`].
     pub fn parse(username: Username, payload: &[u8]) -> Result<Self, ProfileError> {
         let text = std::str::from_utf8(payload)?;
-        let value: toml::Value = toml::from_str(text)?;
-        let table = value.as_table().ok_or(ProfileError::NotATable)?;
+        let document: toml::Value = toml::from_str(text)?;
+        let table = document.as_table().ok_or(ProfileError::NotATable)?;
 
         let mut attributes = IndexMap::with_capacity(table.len());
         let mut declared_username = None;
 
-        for (key, value) in table {
+        for (key, field_value) in table {
             if key == "username" {
-                let declared = value
+                let declared = field_value
                     .as_str()
                     .ok_or_else(|| ProfileError::NonStringValue { key: key.clone() })?;
-                declared_username = Some(declared.to_string());
+                declared_username = Some(declared.to_owned());
                 continue;
             }
 
-            let entry = value
+            let entry = field_value
                 .as_str()
                 .ok_or_else(|| ProfileError::NonStringValue { key: key.clone() })?;
-            attributes.insert(key.clone(), entry.to_string());
+            attributes.insert(key.clone(), entry.to_owned());
         }
 
         let declared = declared_username.ok_or(ProfileError::MissingUsername)?;
@@ -81,22 +81,22 @@ impl FingerProfile {
 
         if include_plan {
             lines.push(String::new());
-            lines.push("Plan:".to_string());
+            lines.push("Plan:".to_owned());
             if let Some(content) = plan {
                 if content.trim().is_empty() {
-                    lines.push("(empty plan)".to_string());
+                    lines.push("(empty plan)".to_owned());
                 } else {
                     for line in content.lines() {
                         lines.push(sanitise_line(line));
                     }
                 }
             } else {
-                lines.push("(no plan)".to_string());
+                lines.push("(no plan)".to_owned());
             }
         }
 
         lines.push(String::new());
-        lines.push("Powered by fingermouse".to_string());
+        lines.push("Powered by fingermouse".to_owned());
 
         ResponseBody { lines }
     }

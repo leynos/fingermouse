@@ -41,13 +41,13 @@ fn is_embedded_control_char(b: u8) -> bool {
 /// Strip framing and validate the raw query input.
 fn validate_input(line: &[u8]) -> Result<&str, QueryError> {
     let raw = std::str::from_utf8(line).map_err(|_| QueryError::InvalidEncoding)?;
-    let raw = raw.strip_suffix("\r\n").ok_or(QueryError::MissingCrlf)?;
+    let stripped = raw.strip_suffix("\r\n").ok_or(QueryError::MissingCrlf)?;
 
-    if raw.bytes().any(is_embedded_control_char) {
+    if stripped.bytes().any(is_embedded_control_char) {
         return Err(QueryError::ControlCharacter);
     }
 
-    Ok(raw)
+    Ok(stripped)
 }
 
 /// Parse the optional `/W` verbose flag from the query tokens.

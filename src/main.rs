@@ -33,18 +33,22 @@ async fn main() -> Result<()> {
         config.plan_prefix.clone(),
     );
 
-    let config = Arc::new(config);
-    let limiter = Arc::new(RateLimiter::new(config.rate.clone()));
-    let repository = Arc::new(repository);
+    let config_arc = Arc::new(config);
+    let limiter = Arc::new(RateLimiter::new(config_arc.rate.clone()));
+    let repository_arc = Arc::new(repository);
 
-    let server = FingerServer::new(config, repository, limiter);
+    let server = FingerServer::new(config_arc, repository_arc, limiter);
     server.run().await
 }
 
 fn install_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    let _ = tracing_subscriber::fmt()
+    if tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_target(false)
-        .try_init();
+        .try_init()
+        .is_err()
+    {
+        // Ignore global subscriber initialisation errors when already set.
+    }
 }

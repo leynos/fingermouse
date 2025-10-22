@@ -79,9 +79,8 @@ impl<S> ConnectionHandler<S>
 where
     S: UserStore + 'static,
 {
-    async fn serve(&self, stream: TcpStream, addr: SocketAddr) -> Result<()> {
+    async fn serve(&self, mut stream: TcpStream, addr: SocketAddr) -> Result<()> {
         let remote_ip = addr.ip();
-        let mut stream = stream;
         if self.enforce_rate_limit(&mut stream, remote_ip).await? {
             return Ok(());
         }
@@ -112,8 +111,7 @@ where
 
     async fn read_query(&self, stream: &mut TcpStream) -> Result<Vec<u8>> {
         let mut reader = BufReader::new(stream);
-        let request = self.read_request(&mut reader).await?;
-        Ok(request)
+        self.read_request(&mut reader).await
     }
 
     async fn parse_query(
@@ -245,8 +243,8 @@ mod tests {
             default_host: default_host.clone(),
             allowed_hosts: vec![default_host],
             store_root: PathBuf::from("."),
-            profile_prefix: "profiles".to_string(),
-            plan_prefix: "plans".to_string(),
+            profile_prefix: "profiles".to_owned(),
+            plan_prefix: "plans".to_owned(),
             rate: RateLimitSettings {
                 max_requests: 10,
                 window: Duration::from_secs(60),
@@ -305,16 +303,16 @@ mod tests {
             limiter: rate_limiter(),
         };
 
-        let username = Username::parse(username).map_err(|err| anyhow!(err))?;
+        let parsed_username = Username::parse(username).map_err(|err| anyhow!(err))?;
         let query = FingerQuery {
-            username,
+            username: parsed_username,
             host: None,
             verbose,
         };
-        let response = handler
+        let response_bytes = handler
             .build_response(query, handler.config.default_host.clone())
             .await;
-        let response = String::from_utf8(response)?;
+        let response = String::from_utf8(response_bytes)?;
         assert!(
             response.contains(expected_content),
             "expected response to include '{expected_content}', got '{response}'"
