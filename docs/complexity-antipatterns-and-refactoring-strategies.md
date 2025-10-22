@@ -788,3 +788,52 @@ values code quality and continuous improvement. The oft-quoted wisdom, "Good
 programmers write code that humans can understand"1, remains the guiding
 principle. Strive for this ideal to build systems that are not only powerful
 and efficient, but also a pleasure to evolve and maintain.
+
+## Works Cited
+
+1. How to Identify and Reduce Cognitive Complexity in Your Codebase - Axify, <https://axify.io/blog/cognitive-complexity>
+2. Top 5 Software Anti Patterns to Avoid for Better Development Outcomes | BairesDev, <https://www.bairesdev.com/blog/software-anti-patterns/>
+3. Cyclomatic complexity - Wikipedia, <https://en.wikipedia.org/wiki/Cyclomatic_complexity>
+4. Cyclomatic complexity: Definition and limits in understanding code quality - DX, <https://getdx.com/blog/cyclomatic-complexity/>
+5. Cognitive Complexity - Code Climate, <https://docs.codeclimate.com/docs/cognitive-complexity>
+6. Cognitive Complexity | Sonar SonarSource | Sonar, <https://www.sonarsource.com/resources/cognitive-complexity/#:~:text=This%20paper%20describes%20Cognitive%20Complexity,Complexity%20precedents%20with%20human%20assessment.>
+7. Cognitive Complexity of functions should not be too high - Rules - SonarQube Server, <https://next.sonarqube.com/sonarqube/coding_rules?languages=cpp&q=cognitive&open=cpp%3AS3776>
+8. The Bumpy Road Code Smell: Measuring Code Complexity by its Shape and Distribution, <https://codescene.com/engineering-blog/bumpy-road-code-complexity-in-context/>
+9. Bumpy Road - Samman Technical Coaching, <https://sammancoaching.org/code_smells/bumpy_road.html>
+10. Your Code as a Crime Scene, Second Edition, <https://media.pragprog.com/titles/atcrime2/logic.pdf>
+11. The software anti patterns that are killing development speed | Okoone, <https://www.okoone.com/spark/strategy-transformation/the-software-anti-patterns-that-are-killing-development-speed/>
+12. How to *resist* refactoring a large spaghetti codebase? : r/SoftwareEngineering - Reddit, <https://www.reddit.com/r/SoftwareEngineering/comments/11smgtp/how_to_resist_refactoring_a_large_spaghetti/>
+13. How would you refactor nested IF Statements? - Software Engineering Stack Exchange, <https://softwareengineering.stackexchange.com/questions/47789/how-would-you-refactor-nested-if-statements>
+14. CodeScene ACE: Auto-Refactor Code, <https://codescene.io/docs/auto-refactor/index.html>
+15. Code Smells - Samman Technical Coaching, <https://sammancoaching.org/reference/code_smells/>
+16. src/sas/sascalc/poresize/maxEnt_method.py - CodeScene, <https://codescene.io/projects/64300/delta?repo-id=263464&review-id=3247&biomarker=Overall+Code+Complexity&filename=src%2Fsas%2Fsascalc%2Fporesize%2FmaxEnt_method.py&method=>
+17. Separation of concerns - Wikipedia, <https://en.wikipedia.org/wiki/Separation_of_concerns>
+18. CQRS Pattern - Azure Architecture Center | Microsoft Learn, <https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs>
+19. Mastering CQRS: 7 Powerful Benefits of Command Query Responsibility Segregation, <https://hyscaler.com/insights/mastering-cqrs-benefits-of-command-query/>
+20. Implementing the CQRS in a .NET - DEV Community, <https://dev.to/moh_moh701/enhancing-net-applications-with-cqrs-and-solid-principles-30i8>
+21. CQRS: Understanding From First Principles - NDepend Blog, <https://blog.ndepend.com/cqrs-understanding-first-principles/>
+22. How do you refactor a God class? - Stack Overflow, <https://stackoverflow.com/questions/14870377/how-do-you-refactor-a-god-class>
+23. When to use the CQRS design pattern? - architecture - Stack Overflow, <https://stackoverflow.com/questions/8820748/when-to-use-the-cqrs-design-pattern>
+24. Another pasta-flavored programming problem is "ravioli code". That ..., <https://news.ycombinator.com/item?id=4537664>
+25. Ravioli Code - C2 wiki, <https://wiki.c2.com/?RavioliCode>
+26. Ravioli code - why an anti-pattern? - Stack Overflow, <https://stackoverflow.com/questions/2052017/ravioli-code-why-an-anti-pattern>
+27. A Guide to Data Abstraction and Its Significant Benefits - CelerData, <https://celerdata.com/glossary/a-guide-to-data-abstraction>
+28. The Role of Abstraction in Software Development | Bebras Armenia, <https://bebras.am/en/blog/The-Role-of-Abstraction-in-Software-Development>
+29. Abstraction, Refactoring, Complexity, and Tradeoffs - Part 1 | Synth ..., <https://omux.dev/blog/abstraction-refactoring-complexity/>
+30. Don't create over abstractions - Castineiras thoughts -, <https://www.castineiras.com/?p=102>
+31. Refactor `if-else` Statements to `match-case` for Improved Readability and Maintainability in Python 3.10+ · Issue #453 - GitHub, <https://github.com/sourcery-ai/sourcery/issues/453>
+32. Structural Pattern Matching in Python – Real Python, <https://realpython.com/structural-pattern-matching/>
+33. PEP 636 – Structural Pattern Matching: Tutorial | peps.python.org, <https://peps.python.org/pep-0636/>
+34. Structural Pattern Matching in Python: A Comprehensive Guide ..., <https://betterstack.com/community/guides/scaling-python/python-pattern-matching/>
+35. Refactor expressions to use pattern matching - JetBrains Guide, <https://www.jetbrains.com/guide/dotnet/tips/property-pattern-matching/>
+36. Imperative Programming vs Declarative Programming - Proxify, <https://proxify.io/articles/imperative-programming-vs-declarative-programming>
+37. Imperative vs. Declarative Programming - Pros and Cons - Netguru, <https://www.netguru.com/blog/imperative-vs-declarative>
+38. The Bumpy Road Code Smell: Measuring Code Complexity by Shape and Distribution : r/programming - Reddit, <https://www.reddit.com/r/programming/comments/fcsm8h/the_bumpy_road_code_smell_measuring_code/>
+39. Refactoring - Replace Conditional Dispatcher with Command - Scrutinizer CI, <https://scrutinizer-ci.com/docs/refactorings/replace-conditional-dispatcher-with-command>
+40. The command dispatcher pattern - Olivier Laviale, <https://olvlvl.com/2018-04-command-dispatcher-pattern.html>
+41. How To Easily Understand The Dispatcher Script Pattern - NetSuite Insights, <https://netsuite.smash-ict.com/how-to-understand-the-dispatcher-script-pattern/>
+42. Switch Statements - Refactoring.Guru, <https://refactoring.guru/smells/switch-statements>
+43. Switch statement refactoring : r/csharp - Reddit, <https://www.reddit.com/r/csharp/comments/1iim8z6/switch_statement_refactoring/>
+44. CQRS Antipatterns | Trailmax Tech, <https://tech.trailmax.info/2017/01/cqrs-antipatterns/>
+45. State - Refactoring.Guru, <https://refactoring.guru/design-patterns/state>
+46. State · Design Patterns Revisited · Game Programming Patterns, <https://gameprogrammingpatterns.com/state.html>
