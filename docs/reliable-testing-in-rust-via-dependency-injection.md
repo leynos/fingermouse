@@ -37,7 +37,8 @@ mockable = "0.3"
 
 ### 2. The Untestable Code (Before)
 
-Directly calling `std::env` makes it difficult to test all logic paths exhaustively.
+Directly calling `std::env` makes it difficult to test all logic paths
+exhaustively.
 
 ```rust
 pub fn get_api_key() -> Option<String> {
@@ -126,8 +127,8 @@ ______________________________________________________________________
 ## 🔩 Handling Other Non-Deterministic Dependencies
 
 This dependency injection pattern also applies to other non-deterministic
-dependencies such as the system clock. The `mockable` crate provides a `Clock` trait for
-this purpose.
+dependencies such as the system clock. The `mockable` crate provides a `Clock`
+trait for this purpose.
 
 ### Untestable Code
 

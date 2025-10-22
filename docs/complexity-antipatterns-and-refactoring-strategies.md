@@ -514,8 +514,8 @@ spaghetti.16
 5. **Iterative Refactoring and Review:** Refactoring is not always a one-shot
   process. Continuously review the abstractions. Consider whether they help or
   hinder understanding, and whether too many trivial classes could be
-  consolidated.9 Pair programming can also help maintain a balanced
-   perspective during refactoring.20
+  consolidated.9 Pair programming can also help maintain a balanced perspective
+  during refactoring.20
 
 6. **The "You Aren't Gonna Need It" (YAGNI) Principle:** This principle helps
    avoid unnecessary abstractions and features, which can contribute to Ravioli
