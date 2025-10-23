@@ -286,7 +286,7 @@ engineering principles from the outset.
 
    Consider:
 
-```cpp
+   ```cpp
    void process(Data d) {
        if (!d.isValid()) { // +1 (if)
            // handle invalid
@@ -340,13 +340,13 @@ perform auto-refactoring for certain languages.[^9]
 
 ### C. Red Flags Portending the Bumpy Road
 
-Recognising early warning signs can prevent minor complexity issues from
+Recognizing early warning signs can prevent minor complexity issues from
 escalating into full-blown Bumpy Roads.
 
 1. **Increasing Cognitive Complexity Scores:** A rising Cognitive Complexity
    score for a method in static analysis tools is a direct indicator.[^8]
 
-2. **Deeply Nested Logic:** Even a single area of deep nesting (more than 2-3
+2. **Deeply Nested Logic:** Even a single area of deep nesting (more than 2–3
    levels) should be a concern. If multiple such areas appear in the same
    function, it's a strong red flag.[^9]
 
@@ -567,10 +567,11 @@ with match-case) and C#, offers a declarative and expressive way to handle
 complex conditional logic, often replacing verbose if-elif-else chains or
 switch statements.21.
 
-It works by allowing code to match against the *structure* of data—such as its
-type, shape, or specific values within sequences (lists, tuples) or mappings
-(dictionaries)—and simultaneously destructure this data, binding parts of it to
-variables.[^23] This approach can significantly reduce cognitive load. The
+It works by allowing code to match against the *structure* of data—such as
+its type, shape, or specific values within sequences (lists, tuples) or
+mappings (dictionaries)—and simultaneously destructure this data, binding
+parts of it to variables.[^23] This approach can significantly reduce
+cognitive load. The
 clarity comes from the direct mapping of data shapes to code blocks, making it
 easier to understand the conditions under which a piece of code executes.[^22]
 For instance, instead of multiple
@@ -794,101 +795,72 @@ and efficient, but also a pleasure to evolve and maintain.
 
 ## Works Cited
 
-[^1]: How to Identify and Reduce Cognitive Complexity in Your Codebase - Axify,
+[^1]: How to Identify and Reduce Cognitive Complexity in Your Codebase — Axify,
       <https://axify.io/blog/cognitive-complexity>
 [^2]: Top 5 Software Anti Patterns to Avoid for Better Development Outcomes |
       BairesDev, <https://www.bairesdev.com/blog/software-anti-patterns/>
-[^3]: Cyclomatic complexity - Wikipedia,
+[^3]: Cyclomatic complexity — Wikipedia,
       <https://en.wikipedia.org/wiki/Cyclomatic_complexity>
 [^4]: Cyclomatic complexity: Definition and limits in understanding code
-      quality - DX, <https://getdx.com/blog/cyclomatic-complexity/>
-[^5]: Cyclomatic complexity - Wikipedia (risk classification),
+      quality — DX, <https://getdx.com/blog/cyclomatic-complexity/>
+[^5]: Cyclomatic complexity — Wikipedia (risk classification),
       <https://en.wikipedia.org/wiki/Cyclomatic_complexity>
-[^6]: Cognitive Complexity - Code Climate,
+[^6]: Cognitive Complexity — Code Climate,
       <https://docs.codeclimate.com/docs/cognitive-complexity>
 [^7]: Cognitive Complexity | Sonar SonarSource | Sonar,
       <https://www.sonarsource.com/resources/cognitive-complexity/#:~:text=This%20paper%20describes%20Cognitive%20Complexity,Complexity%20precedents%20with%20human%20assessment.>
-[^8]: Cognitive Complexity of functions should not be too high - Rules -
+[^8]: Cognitive Complexity of functions should not be too high — Rules -
       SonarQube Server,
       <https://next.sonarqube.com/sonarqube/coding_rules?languages=cpp&q=cognitive&open=cpp%3AS3776>
 [^9]: The Bumpy Road Code Smell: Measuring Code Complexity by its Shape and
       Distribution,
       <https://codescene.com/engineering-blog/bumpy-road-code-complexity-in-context/>
-[^10]: Bumpy Road - Samman Technical Coaching,
+[^10]: Bumpy Road — Samman Technical Coaching,
       <https://sammancoaching.org/code_smells/bumpy_road.html>
 [^11]: Your Code as a Crime Scene, Second Edition,
        <https://media.pragprog.com/titles/atcrime2/logic.pdf>
 [^12]: The software anti patterns that are killing development speed | Okoone,
        <https://www.okoone.com/spark/strategy-transformation/the-software-anti-patterns-that-are-killing-development-speed/>
 [^13]: How to *resist* refactoring a large spaghetti codebase? :
-       r/SoftwareEngineering - Reddit,
+       r/SoftwareEngineering — Reddit,
        <https://www.reddit.com/r/SoftwareEngineering/comments/11smgtp/how_to_resist_refactoring_a_large_spaghetti/>
-[^14]: How would you refactor nested IF Statements? - Software Engineering
+[^14]: How would you refactor nested IF Statements? — Software Engineering
        Stack Exchange,
        <https://softwareengineering.stackexchange.com/questions/47789/how-would-you-refactor-nested-if-statements>
 [^15]: CodeScene ACE: Auto-Refactor Code,
        <https://codescene.io/docs/auto-refactor/index.html>
-[^16]: Code Smells - Samman Technical Coaching,
+[^16]: Code Smells — Samman Technical Coaching,
        <https://sammancoaching.org/reference/code_smells/>
-[^17]: src/sas/sascalc/poresize/maxEnt_method.py - CodeScene,
+[^17]: src/sas/sascalc/poresize/maxEnt_method.py — CodeScene,
        <https://codescene.io/projects/64300/delta?repo-id=263464&review-id=3247&biomarker=Overall+Code+Complexity&filename=src%2Fsas%2Fsascalc%2Fporesize%2FmaxEnt_method.py&method=>
-[^18]: Separation of concerns - Wikipedia,
+[^18]: Separation of concerns — Wikipedia,
        <https://en.wikipedia.org/wiki/Separation_of_concerns>
-[^19]: CQRS Pattern - Azure Architecture Center | Microsoft Learn,
+[^19]: CQRS Pattern — Azure Architecture Center | Microsoft Learn,
        <https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs>
 [^20]: Mastering CQRS: 7 Powerful Benefits of Command Query Responsibility
        Segregation,
        <https://hyscaler.com/insights/mastering-cqrs-benefits-of-command-query/>
-[^21]: Implementing the CQRS in a .NET - DEV Community,
+[^21]: Implementing the CQRS in a .NET — DEV Community,
        <https://dev.to/moh_moh701/enhancing-net-applications-with-cqrs-and-solid-principles-30i8>
-[^22]: CQRS: Understanding From First Principles - NDepend Blog,
+[^22]: CQRS: Understanding From First Principles — NDepend Blog,
        <https://blog.ndepend.com/cqrs-understanding-first-principles/>
-[^23]: How do you refactor a God class? - Stack Overflow,
+[^23]: How do you refactor a God class? — Stack Overflow,
        <https://stackoverflow.com/questions/14870377/how-do-you-refactor-a-god-class>
-[^24]: When to use the CQRS design pattern? - architecture - Stack Overflow,
+[^24]: When to use the CQRS design pattern? — architecture — Stack Overflow,
        <https://stackoverflow.com/questions/8820748/when-to-use-the-cqrs-design-pattern>
 [^25]: Another pasta-flavored programming problem is "ravioli code". That ...,
        <https://news.ycombinator.com/item?id=4537664>
-[^26]: Ravioli Code - C2 wiki, <https://wiki.c2.com/?RavioliCode>
-[^27]: Ravioli code - why an anti-pattern? - Stack Overflow,
+[^26]: Ravioli Code — C2 wiki, <https://wiki.c2.com/?RavioliCode>
+[^27]: Ravioli code — why an anti-pattern? — Stack Overflow,
        <https://stackoverflow.com/questions/2052017/ravioli-code-why-an-anti-pattern>
-[^28]: A Guide to Data Abstraction and Its Significant Benefits - CelerData,
+[^28]: A Guide to Data Abstraction and Its Significant Benefits — CelerData,
        <https://celerdata.com/glossary/a-guide-to-data-abstraction>
 [^29]: The Role of Abstraction in Software Development | Bebras Armenia,
        <https://bebras.am/en/blog/The-Role-of-Abstraction-in-Software-Development>
-[^30]: Abstraction, Refactoring, Complexity, and Tradeoffs - Part 1 | Synth
+[^30]: Abstraction, Refactoring, Complexity, and Tradeoffs — Part 1 | Synth
        ..., <https://omux.dev/blog/abstraction-refactoring-complexity/>
-[^31]: Don't create over abstractions - Castineiras thoughts -,
+[^31]: Don't create over abstractions — Castineiras thoughts -,
        <https://www.castineiras.com/?p=102>
 [^32]: Refactor `if-else` Statements to `match-case` for Improved Readability
-       and Maintainability in Python 3.10+ · Issue #453 - GitHub,
+       and Maintainability in Python 3.10+ · Issue #453 — GitHub,
        <https://github.com/sourcery-ai/sourcery/issues/453>
-[^33]: Structural Pattern Matching in Python – Real Python,
-       <https://realpython.com/structural-pattern-matching/>
-[^34]: PEP 636 – Structural Pattern Matching: Tutorial | peps.python.org,
-       <https://peps.python.org/pep-0636/>
-[^35]: Structural Pattern Matching in Python: A Comprehensive Guide ...,
-       <https://betterstack.com/community/guides/scaling-python/python-pattern-matching/>
-[^36]: Refactor expressions to use pattern matching - JetBrains Guide,
-       <https://www.jetbrains.com/guide/dotnet/tips/property-pattern-matching/>
-[^37]: Imperative Programming vs Declarative Programming - Proxify,
-       <https://proxify.io/articles/imperative-programming-vs-declarative-programming>
-[^38]: Imperative vs. Declarative Programming - Pros and Cons - Netguru,
-       <https://www.netguru.com/blog/imperative-vs-declarative>
-[^39]: The Bumpy Road Code Smell: Measuring Code Complexity by Shape and
-       Distribution : r/programming - Reddit,
-       <https://www.reddit.com/r/programming/comments/fcsm8h/the_bumpy_road_code_smell_measuring_code/>
-[^40]: Refactoring - Replace Conditional Dispatcher with Command - Scrutinizer
-       CI,
-       <https://scrutinizer-ci.com/docs/refactorings/replace-conditional-dispatcher-with-command>
-[^41]: The command dispatcher pattern - Olivier Laviale,
-       <https://olvlvl.com/2018-04-command-dispatcher-pattern.html>
-[^42]: How To Easily Understand The Dispatcher Script Pattern - NetSuite
-       Insights,
-       <https://netsuite.smash-ict.com/how-to-understand-the-dispatcher-script-pattern/>
-[^43]: Switch Statements - Refactoring.Guru,
-       <https://refactoring.guru/smells/switch-statements>
-[^44]: Switch statement refactoring : r/csharp - Reddit,
-       <https://www.reddit.com/r/csharp/comments/1iim8z6/switch_statement_refactoring/>
-[^45]: CQRS Antipatterns | Trailmax Tech,
-       <https://tech.trailmax.info/2017/01/cqrs-antipatterns/>

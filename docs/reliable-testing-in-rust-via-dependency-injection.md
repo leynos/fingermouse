@@ -32,7 +32,7 @@ First, add the crate to development dependencies in `Cargo.toml`.
 
 ```toml
 [dev-dependencies]
-mockable = "0.3"
+mockable = { version = "0.1.4", default-features = false, features = ["clock", "mock"] }
 ```
 
 ### 2. The Untestable Code (Before)
@@ -127,7 +127,7 @@ ______________________________________________________________________
 ## 🔩 Handling Other Non-Deterministic Dependencies
 
 This dependency injection pattern also applies to other non-deterministic
-dependencies such as the system clock. The `mockable` crate provides a `Clock`
+dependencies, such as the system clock. The `mockable` crate provides a `Clock`
 trait for this purpose.
 
 ### Untestable Code
