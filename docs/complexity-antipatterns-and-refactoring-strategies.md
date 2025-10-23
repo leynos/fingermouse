@@ -420,7 +420,7 @@ CQRS is an architectural pattern that segregates operations that modify state
 task-based and should represent specific business intentions (e.g.,
 
 `BookHotelRoomCommand` rather than `SetReservationStatusCommand`).[^14] Queries
-never alter data and return Data Transfer Objects (DTOs) optimised for display
+never alter data and return Data Transfer Objects (DTOs) optimized for display
 needs.[^14]
 
 While CQRS operates at a higher architectural level than a single Bumpy Road
