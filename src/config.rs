@@ -1,13 +1,12 @@
 //! Application configuration and command-line parsing.
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
-use object_store::ObjectStore;
-use object_store::local::LocalFileSystem;
-use std::sync::Arc;
+use object_store::{ObjectStore, local::LocalFileSystem};
 use tracing::warn;
 
 use crate::identity::{HostName, IdentityError};
@@ -41,6 +40,9 @@ pub struct CliOptions {
     /// Length of the rate-limiting window in seconds.
     #[arg(long, env = "FINGERMOUSE_RATE_WINDOW_SECS", default_value_t = 60)]
     pub rate_window_secs: u64,
+    /// Maximum number of client entries retained in the rate limiter.
+    #[arg(long, env = "FINGERMOUSE_RATE_CAPACITY", default_value_t = 8192)]
+    pub rate_capacity: usize,
     /// Timeout in milliseconds for reading the client query line.
     #[arg(long, env = "FINGERMOUSE_REQUEST_TIMEOUT_MS", default_value_t = 3000)]
     pub request_timeout_ms: u64,
@@ -80,23 +82,13 @@ impl ServerConfig {
 
         let mut allowed_hosts = vec![default_host.clone()];
         if let Some(list) = cli.allowed_hosts {
-            for item in list.split(',') {
-                let trimmed = item.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-                let host = HostName::parse(trimmed).map_err(|err| {
-                    anyhow!("invalid host in allow list: {}", describe_identity(&err))
-                })?;
-                if !allowed_hosts.contains(&host) {
-                    allowed_hosts.push(host);
-                }
-            }
+            extend_allowed_hosts(&list, &mut allowed_hosts)?;
         }
 
         let rate = RateLimitSettings {
             max_requests: cli.rate_limit.max(1),
             window: Duration::from_secs(cli.rate_window_secs.max(1)),
+            max_entries: cli.rate_capacity.max(1),
         };
 
         let max_request_bytes = {
@@ -161,6 +153,24 @@ fn ensure_directory(path: &Path) -> Result<()> {
 
 fn sanitise_prefix(input: &str) -> String {
     input.trim_matches('/').to_owned()
+}
+
+fn extend_allowed_hosts(list: &str, allowed_hosts: &mut Vec<HostName>) -> Result<()> {
+    // Preserve caller supplied ordering while avoiding duplicates so the default
+    // host remains the first entry.
+    for candidate in list
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        let host = HostName::parse(candidate)
+            .map_err(|err| anyhow!("invalid host in allow list: {}", describe_identity(&err)))?;
+        if allowed_hosts.contains(&host) {
+            continue;
+        }
+        allowed_hosts.push(host);
+    }
+    Ok(())
 }
 
 fn describe_identity(err: &IdentityError) -> String {

@@ -34,7 +34,7 @@ pub enum QueryError {
     InvalidEncoding,
 }
 
-fn is_embedded_control_char(b: u8) -> bool {
+const fn is_embedded_control_char(b: u8) -> bool {
     matches!(b, 0x00..=0x1f) && b != b'\r' && b != b'\n'
 }
 

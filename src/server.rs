@@ -20,6 +20,13 @@ const HOST_MISMATCH: &str = "fingermouse: host not served here";
 const RATE_LIMIT_MESSAGE: &str = "fingermouse: slow down";
 const USER_MISSING: &str = "fingermouse: no matching record";
 
+// Centralise connection error logging to keep the spawn closure shallow for clippy.
+fn log_connection_failure(remote: SocketAddr, outcome: Result<()>) {
+    if let Err(err) = outcome {
+        warn!(remote = %remote, error = %err, "connection handling failed");
+    }
+}
+
 /// Tokio-based TCP server that answers finger protocol requests.
 pub struct FingerServer<S>
 where
@@ -35,7 +42,7 @@ where
     S: UserStore + 'static,
 {
     /// Create a new server instance using the supplied components.
-    pub fn new(config: Arc<ServerConfig>, store: Arc<S>, limiter: Arc<RateLimiter>) -> Self {
+    pub const fn new(config: Arc<ServerConfig>, store: Arc<S>, limiter: Arc<RateLimiter>) -> Self {
         Self {
             config,
             store,
@@ -58,9 +65,8 @@ where
                 limiter: Arc::clone(&self.limiter),
             };
             tokio::spawn(async move {
-                if let Err(err) = handler.serve(socket, addr).await {
-                    warn!(remote = %addr, error = %err, "connection handling failed");
-                }
+                let outcome = handler.serve(socket, addr).await;
+                log_connection_failure(addr, outcome);
             });
         }
     }
@@ -248,6 +254,7 @@ mod tests {
             rate: RateLimitSettings {
                 max_requests: 10,
                 window: Duration::from_secs(60),
+                max_entries: 8192,
             },
             request_timeout: Duration::from_secs(5),
             max_request_bytes: 512,
@@ -269,26 +276,42 @@ mod tests {
         Arc::new(RateLimiter::new(RateLimitSettings {
             max_requests: 10,
             window: Duration::from_secs(1),
+            max_entries: 8192,
         }))
     }
 
+    #[derive(Clone, Copy)]
+    struct ResponseCase {
+        username: &'static str,
+        verbose: bool,
+        plan: Option<&'static str>,
+        expected_content: &'static str,
+        expected_plan: Option<&'static str>,
+    }
+
     #[rstest]
-    #[case::serves_user("alice", true, Some("Plan line"), "Test User", Some("Plan line"))]
-    #[case::rejects_unknown_user("bob", false, None, USER_MISSING, None)]
+    #[case::serves_user(ResponseCase {
+        username: "alice",
+        verbose: true,
+        plan: Some("Plan line"),
+        expected_content: "Test User",
+        expected_plan: Some("Plan line"),
+    })]
+    #[case::rejects_unknown_user(ResponseCase {
+        username: "bob",
+        verbose: false,
+        plan: None,
+        expected_content: USER_MISSING,
+        expected_plan: None,
+    })]
     #[tokio::test]
-    async fn build_response_scenarios(
-        #[case] username: &str,
-        #[case] verbose: bool,
-        #[case] plan: Option<&str>,
-        #[case] expected_content: &str,
-        #[case] expected_plan: Option<&str>,
-    ) -> Result<()> {
-        let store = match username {
+    async fn build_response_scenarios(#[case] case: ResponseCase) -> Result<()> {
+        let store = match case.username {
             "alice" => {
                 let profile = build_profile("alice")?;
                 let record = UserRecord {
                     profile,
-                    plan: plan.map(str::to_string),
+                    plan: case.plan.map(str::to_string),
                 };
                 Arc::new(StaticStore {
                     record: Some(record),
@@ -303,21 +326,22 @@ mod tests {
             limiter: rate_limiter(),
         };
 
-        let parsed_username = Username::parse(username).map_err(|err| anyhow!(err))?;
+        let parsed_username = Username::parse(case.username).map_err(|err| anyhow!(err))?;
         let query = FingerQuery {
             username: parsed_username,
             host: None,
-            verbose,
+            verbose: case.verbose,
         };
         let response_bytes = handler
             .build_response(query, handler.config.default_host.clone())
             .await;
         let response = String::from_utf8(response_bytes)?;
         assert!(
-            response.contains(expected_content),
-            "expected response to include '{expected_content}', got '{response}'"
+            response.contains(case.expected_content),
+            "expected response to include '{}', got '{response}'",
+            case.expected_content
         );
-        if let Some(plan_fragment) = expected_plan {
+        if let Some(plan_fragment) = case.expected_plan {
             assert!(
                 response.contains(plan_fragment),
                 "expected response to include plan snippet '{plan_fragment}'"

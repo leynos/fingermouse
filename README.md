@@ -37,6 +37,8 @@ environment variables:
   window for each IP address (default `30`).
 - `--rate-window-secs` / `FINGERMOUSE_RATE_WINDOW_SECS`: length of the rate-
   limiting window (default `60`).
+- `--rate-capacity` / `FINGERMOUSE_RATE_CAPACITY`: maximum distinct client IPs
+  retained before eviction (default `8192`).
 - `--request-timeout-ms` / `FINGERMOUSE_REQUEST_TIMEOUT_MS`: read timeout for
   client queries (default `3000`).
 - `--max-request-bytes` / `FINGERMOUSE_MAX_REQUEST_BYTES`: maximum accepted

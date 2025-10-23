@@ -82,23 +82,26 @@ impl FingerProfile {
         if include_plan {
             lines.push(String::new());
             lines.push("Plan:".to_owned());
-            if let Some(content) = plan {
-                if content.trim().is_empty() {
-                    lines.push("(empty plan)".to_owned());
-                } else {
-                    for line in content.lines() {
-                        lines.push(sanitise_line(line));
-                    }
-                }
-            } else {
-                lines.push("(no plan)".to_owned());
-            }
+            Self::append_plan_lines(&mut lines, plan);
         }
 
         lines.push(String::new());
         lines.push("Powered by fingermouse".to_owned());
 
         ResponseBody { lines }
+    }
+
+    // Keep `render` linear by extracting the plan formatting decisions.
+    fn append_plan_lines(lines: &mut Vec<String>, plan: Option<&str>) {
+        match plan {
+            Some(content) if content.trim().is_empty() => {
+                lines.push("(empty plan)".to_owned());
+            }
+            Some(content) => {
+                lines.extend(content.lines().map(sanitise_line));
+            }
+            None => lines.push("(no plan)".to_owned()),
+        }
     }
 }
 

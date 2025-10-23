@@ -84,6 +84,26 @@ impl ObjectStoreUserStore {
         }
     }
 
+    async fn load_plan_if_requested(
+        &self,
+        username: &Username,
+        include_plan: bool,
+    ) -> std::result::Result<Option<String>, RepositoryError> {
+        if !include_plan {
+            return Ok(None);
+        }
+        let plan_path = self.plan_path(username);
+        match self.fetch_bytes(&plan_path).await {
+            Ok(content) => {
+                let plan =
+                    String::from_utf8(content).map_err(|_| RepositoryError::InvalidPlanEncoding)?;
+                Ok(Some(plan))
+            }
+            Err(object_store::Error::NotFound { .. }) => Ok(None),
+            Err(err) => Err(RepositoryError::Storage { source: err }),
+        }
+    }
+
     async fn fetch_bytes(&self, path: &Path) -> std::result::Result<Vec<u8>, object_store::Error> {
         let result = self.store.get(path).await?;
         let bytes = result.bytes().await?;
@@ -112,21 +132,7 @@ impl UserStore for ObjectStoreUserStore {
             let profile =
                 FingerProfile::parse(username.clone(), &bytes).map_err(RepositoryError::Parse)?;
 
-            let plan = if include_plan {
-                let plan_path = self.plan_path(username);
-                match self.fetch_bytes(&plan_path).await {
-                    Ok(content) => Some(
-                        String::from_utf8(content)
-                            .map_err(|_| RepositoryError::InvalidPlanEncoding)?,
-                    ),
-                    Err(object_store::Error::NotFound { .. }) => None,
-                    Err(err) => {
-                        return Err(RepositoryError::Storage { source: err });
-                    }
-                }
-            } else {
-                None
-            };
+            let plan = self.load_plan_if_requested(username, include_plan).await?;
 
             Ok(UserRecord { profile, plan })
         }
