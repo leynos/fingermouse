@@ -17,6 +17,8 @@ tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros", "net", "s
 toml = "0.8.19"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt"] }
+dashmap = "5.5.3"
+metrics = "0.22.3"
 
 [dev-dependencies]
 rstest = "0.21.0"
@@ -30,13 +32,15 @@ allow_attributes                    = "deny"
 allow_attributes_without_reason     = "deny"
 blanket_clippy_restriction_lints    = "deny"
 cognitive_complexity                = "deny"
+needless_pass_by_value              = "deny"
+implicit_hasher                     = "deny"
 
 # 2. debugging leftovers
 dbg_macro                           = "deny"
 print_stdout                        = "deny"
 print_stderr                        = "deny"
 
-# 3. panic-prone operations
+# 2. panic-prone operations
 unwrap_used                         = "deny"
 expect_used                         = "deny"
 indexing_slicing                    = "deny"
@@ -61,13 +65,26 @@ shadow_same                         = "deny"
 shadow_unrelated                    = "deny"
 str_to_string                       = "deny"
 string_lit_as_bytes                 = "deny"
-tests_outside_test_module           = "deny"
 try_err                             = "deny"
 unneeded_field_pattern              = "deny"
 use_self                            = "deny"
 
 # 6. numerical foot-guns
 float_arithmetic                    = "deny"
+cast_possible_truncation            = "deny"
+cast_possible_wrap                  = "deny"
+cast_precision_loss                 = "deny"
+lossy_float_literal                 = "deny"
+
+# 7. API ergonomics
+missing_const_for_fn                = "deny"
+must_use_candidate                  = "deny"
+unused_async                        = "deny"
+
+# 8. Error handling
+missing_panics_doc                  = "deny"
+error_impl_error                    = "deny"
+result_large_err                    = "deny"
 
 [lints.rust]
 missing_docs                        = "deny"
