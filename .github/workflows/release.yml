@@ -141,7 +141,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build on FreeBSD
-        uses: vmactions/freebsd-vm@v0
+        uses: vmactions/freebsd-vm@9991fc3550abdc19b61d50063c7eeb7713bc498f  # v0.3.1
         with:
           release: '13.2'
           arch: ${{ matrix.arch }}
@@ -177,7 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build on OpenBSD
-        uses: vmactions/openbsd-vm@v0
+        uses: vmactions/openbsd-vm@2cbd7618ff813d8235acc5ade8cb5260dcee4502  # v0.1.2
         with:
           release: '7.4'
           arch: ${{ matrix.arch }}
