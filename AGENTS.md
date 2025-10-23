@@ -116,7 +116,7 @@ management. Contributors should follow these best practices when working on the
 project:
 
 - Run `make check-fmt`, `make lint`, and `make test` before committing. These
-  targets wrap the following commands so contributors understand the exact
+  targets wrap the following commands, so contributors understand the exact
   behaviour and policy enforced:
   - `make check-fmt` executes:
 
@@ -149,8 +149,8 @@ project:
   adhering to separation of concerns and CQRS.
 - Where a function has too many parameters, group related parameters in
   meaningfully named structs.
-- Where a function is returning a large error consider using `Arc` to reduce the
-  amount of data returned.
+- Where a function is returning a large error, consider using `Arc` to reduce
+  the amount of data returned.
 - Write unit and behavioural tests for new functionality. Run both before and
   after making any change.
 - Every module **must** begin with a module level (`//!`) comment explaining the
@@ -160,7 +160,7 @@ project:
 - Prefer immutable data and avoid unnecessary `mut` bindings.
 - Handle errors with the `Result` type instead of panicking where feasible.
 - Use explicit version ranges in `Cargo.toml` and keep dependencies up-to-date.
-- Avoid `unsafe` code unless absolutely necessary and document any usage
+- Avoid `unsafe` code unless absolutely necessary, and document any usage
   clearly.
 - Place function attributes **after** doc comments.
 - Do not use `return` in single-line functions.
@@ -191,7 +191,7 @@ project:
   `newt-hype` when introducing many homogeneous wrappers that share behaviour;
   add small shims such as `From<&str>` and `AsRef<str>` for string-backed
   wrappers. For path-centric wrappers implement `AsRef<Path>` alongside
-  `into_inner()` and `to_path_buf()`; avoid attempting
+  `into_inner()` and `to_path_buf()`,; avoid attempting
   `impl From<Wrapper> for PathBuf` because of the orphan rule. Prefer explicit
   tuple structs whenever bespoke validation or tailored trait surfaces are
   required, customising `Deref`, `AsRef`, and `TryFrom` per type. Use
@@ -255,39 +255,39 @@ project:
 
 The following tooling is available in this environment:
 
-- `mbake` – A Makefile validator. Run using `mbake validate Makefile`.
-- `strace` – Traces system calls and signals made by a process; useful for
+- `mbake` — A Makefile validator. Run using `mbake validate Makefile`.
+- `strace` — Traces system calls and signals made by a process; useful for
   debugging runtime behaviour and syscalls.
-- `gdb` – The GNU Debugger, for inspecting and controlling programs as they
+- `gdb` — The GNU Debugger, for inspecting and controlling programs as they
   execute (or post-mortem via core dumps).
-- `ripgrep` – Fast, recursive text search tool (`grep` alternative) that
+- `ripgrep` — Fast, recursive text search tool (`grep` alternative) that
   respects `.gitignore` files.
-- `ltrace` – Traces calls to dynamic library functions made by a process.
-- `valgrind` – Suite for detecting memory leaks, profiling, and debugging
+- `ltrace` — Traces calls to dynamic library functions made by a process.
+- `valgrind` — Suite for detecting memory leaks, profiling, and debugging
   low-level memory errors.
-- `bpftrace` – High-level tracing tool for eBPF, using a custom scripting
+- `bpftrace` — High-level tracing tool for eBPF, using a custom scripting
   language for kernel and application tracing.
-- `lsof` – Lists open files and the processes using them.
-- `htop` – Interactive process viewer (visual upgrade to `top`).
-- `iotop` – Displays and monitors I/O usage by processes.
-- `ncdu` – NCurses-based disk usage viewer for finding large files/folders.
-- `tree` – Displays directory structure as a tree.
-- `bat` – `cat` clone with syntax highlighting, Git integration, and paging.
-- `delta` – Syntax-highlighted pager for Git and diff output.
-- `tcpdump` – Captures and analyses network traffic at the packet level.
-- `nmap` – Network scanner for host discovery, port scanning, and service
+- `lsof` — Lists open files and the processes using them.
+- `htop` — Interactive process viewer (visual upgrade to `top`).
+- `iotop` — Displays and monitors I/O usage by processes.
+- `ncdu` — NCurses-based disk usage viewer for finding large files/folders.
+- `tree` — Displays directory structure as a tree.
+- `bat` — `cat` clone with syntax highlighting, Git integration, and paging.
+- `delta` — Syntax-highlighted pager for Git and diff output.
+- `tcpdump` — Captures and analyses network traffic at the packet level.
+- `nmap` — Network scanner for host discovery, port scanning, and service
   identification.
-- `lldb` – LLVM debugger, alternative to `gdb`.
-- `eza` – Modern `ls` replacement with more features and better defaults.
-- `fzf` – Interactive fuzzy finder for selecting files, commands, etc.
-- `hyperfine` – Command-line benchmarking tool with statistical output.
-- `shellcheck` – Linter for shell scripts, identifying errors and bad practices.
-- `fd` – Fast, user-friendly `find` alternative with sensible defaults.
-- `checkmake` – Linter for `Makefile`s, ensuring they follow best practices and
+- `lldb` — LLVM debugger, alternative to `gdb`.
+- `eza` — Modern `ls` replacement with more features and better defaults.
+- `fzf` — Interactive fuzzy finder for selecting files, commands, etc.
+- `hyperfine` — Command-line benchmarking tool with statistical output.
+- `shellcheck` — Linter for shell scripts, identifying errors and bad practices.
+- `fd` — Fast, user-friendly `find` alternative with sensible defaults.
+- `checkmake` — Linter for `Makefile`s, ensuring they follow best practices and
   conventions.
-- `srgn` – [Structural grep](https://github.com/alexpovel/srgn), searches code
+- `srgn` — [Structural grep](https://github.com/alexpovel/srgn), searches code
   and enables editing by syntax tree patterns.
-- `difft` **(Difftastic)** – Semantic diff tool that compares code structure
+- `difft` **(Difftastic)** — Semantic diff tool that compares code structure
   rather than just text differences.
 
 ## Key Takeaway
