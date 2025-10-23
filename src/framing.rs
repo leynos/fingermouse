@@ -18,6 +18,7 @@ impl CrlfBuffer {
     /// existing endings.
     pub fn push_line(&mut self, line: &str) {
         let trimmed = trim_line_endings(line);
+        self.bytes.reserve(trimmed.len() + 2);
         self.bytes.extend_from_slice(trimmed.as_bytes());
         self.bytes.extend_from_slice(b"\r\n");
     }

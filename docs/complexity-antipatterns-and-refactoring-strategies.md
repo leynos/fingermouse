@@ -398,11 +398,11 @@ improperly co-located within a single method.[^9] For example, a single method
 might handle input validation, business logic processing for different cases,
 data transformation, and error handling for each case, all intermingled.
 Refactoring a Bumpy Road by extracting methods inherently applies SoC, as each
-extracted method ideally handles a single, well-defined concern.[^10] This leads
-to increased freedom for simplification, maintenance, module upgrade, reuse,
-and independent development.[^13] While SoC might introduce more interfaces and
-potentially more code to execute, the benefits in clarity and maintainability
-often outweigh these costs, especially as systems grow.[^13]
+extracted method ideally handles a single, well-defined concern.[^10] This
+leads to increased freedom for simplification, maintenance, module upgrade,
+reuse, and independent development.[^13] While SoC might introduce more
+interfaces and potentially more code to execute, the benefits in clarity and
+maintainability often outweigh these costs, especially as systems grow.[^13]
 
 Consider a function that processes different types of user commands. A Bumpy
 Road approach might have a large `if-else if-else` structure, with each block
@@ -567,24 +567,21 @@ with match-case) and C#, offers a declarative and expressive way to handle
 complex conditional logic, often replacing verbose if-elif-else chains or
 switch statements.21.
 
-It works by allowing code to match against the *structure* of data—such as
-its type, shape, or specific values within sequences (lists, tuples) or
-mappings (dictionaries)—and simultaneously destructure this data, binding
-parts of it to variables.[^23] This approach can significantly reduce
-cognitive load. The
+It works by allowing code to match against the *structure* of data—such as its
+type, shape, or specific values within sequences (lists, tuples) or mappings
+(dictionaries)—and simultaneously destructure this data, binding parts of it to
+variables.[^22] This approach can significantly reduce cognitive load. The
 clarity comes from the direct mapping of data shapes to code blocks, making it
-easier to understand the conditions under which a piece of code executes.[^22]
-For instance, instead of multiple
-
-`isinstance` checks followed by key lookups and value comparisons in a nested.
-`if` structure to parse a JSON object, a single `case` statement with a mapping
-pattern can define the expected structure and extract the necessary values
-concisely.[^23] This shifts the focus from an imperative sequence of checks to
-a declarative description of data shapes, which is often more intuitive. The
-destructuring capability is particularly powerful, as it eliminates the manual
-code otherwise needed to extract values after a condition has been met,
-reducing boilerplate and the number of mental steps a developer must
-follow.[^23]
+easier to understand the conditions under which a piece of code executes.[^23]
+For instance, instead of multiple `isinstance` checks followed by key lookups
+and value comparisons in a nested `if` structure to parse a JSON object, a
+single `case` statement with a mapping pattern can define the expected
+structure and extract the necessary values concisely.[^22] This shifts the
+focus from an imperative sequence of checks to a declarative description of
+data shapes, which is often more intuitive. The destructuring capability is
+particularly powerful, as it eliminates the manual code otherwise needed to
+extract values after a condition has been met, reducing boilerplate and the
+number of mental steps a developer must follow.[^22]
 
 Consider processing different event types from a UI framework, where events are
 represented as dictionaries.[^24]
@@ -623,7 +620,7 @@ The pattern matching version is more readable and directly expresses the
 expected structure of each event type, reducing the cognitive effort to
 understand the conditions and data extraction. Key features like guards (`if`
 conditions on `case` statements) allow for additional non-structural checks,
-further enhancing its power.[^23]
+further enhancing its power.[^22]
 
 2\. Embracing Declarative Programming
 
@@ -842,13 +839,13 @@ and efficient, but also a pleasure to evolve and maintain.
        <https://hyscaler.com/insights/mastering-cqrs-benefits-of-command-query/>
 [^21]: Implementing the CQRS in a .NET — DEV Community,
        <https://dev.to/moh_moh701/enhancing-net-applications-with-cqrs-and-solid-principles-30i8>
-[^22]: CQRS: Understanding From First Principles — NDepend Blog,
-       <https://blog.ndepend.com/cqrs-understanding-first-principles/>
-[^23]: How do you refactor a God class? — Stack Overflow,
+[^22]: How do you refactor a God class? — Stack Overflow,
        <https://stackoverflow.com/questions/14870377/how-do-you-refactor-a-god-class>
+[^23]: CQRS: Understanding From First Principles — NDepend Blog,
+       <https://blog.ndepend.com/cqrs-understanding-first-principles/>
 [^24]: When to use the CQRS design pattern? — architecture — Stack Overflow,
        <https://stackoverflow.com/questions/8820748/when-to-use-the-cqrs-design-pattern>
-[^25]: Another pasta-flavored programming problem is "ravioli code". That ...,
+[^25]: Another pasta-flavored programming problem is "ravioli code". That …,
        <https://news.ycombinator.com/item?id=4537664>
 [^26]: Ravioli Code — C2 wiki, <https://wiki.c2.com/?RavioliCode>
 [^27]: Ravioli code — why an anti-pattern? — Stack Overflow,
@@ -858,7 +855,7 @@ and efficient, but also a pleasure to evolve and maintain.
 [^29]: The Role of Abstraction in Software Development | Bebras Armenia,
        <https://bebras.am/en/blog/The-Role-of-Abstraction-in-Software-Development>
 [^30]: Abstraction, Refactoring, Complexity, and Tradeoffs — Part 1 | Synth
-       ..., <https://omux.dev/blog/abstraction-refactoring-complexity/>
+       …, <https://omux.dev/blog/abstraction-refactoring-complexity/>
 [^31]: Don't create over abstractions — Castineiras thoughts -,
        <https://www.castineiras.com/?p=102>
 [^32]: Refactor `if-else` Statements to `match-case` for Improved Readability
