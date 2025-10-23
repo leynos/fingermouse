@@ -22,8 +22,8 @@
 - **Group by feature, not layer.** Colocate views, logic, fixtures, and helpers
   related to a domain concept rather than splitting by type.
 - **Use consistent spelling and grammar.** Comments must use en-GB-oxendict
-  ("-ize" / "-yse" / "-our") spelling and grammar, except for references to
-  external APIs.
+  ("-ize" / "-yse" / "-our") spelling and grammar, with the exception of
+  references to external APIs.
 - **Illustrate with clear examples.** Function documentation must include clear
   examples demonstrating the usage and outcome of the function. Test
   documentation should omit examples where the example serves only to reiterate
@@ -45,8 +45,6 @@
 - Documentation must use en-GB-oxendict ("-ize" / "-yse" / "-our") spelling
   and grammar. (EXCEPTION: the naming of the "LICENSE" file, which is to be
   left unchanged for community consistency.)
-- A documentation style guide is provided at
-  `docs/documentation-style-guide.md`.
 
 ## Change Quality & Committing
 
@@ -81,7 +79,7 @@
 ## Refactoring Heuristics & Workflow
 
 - **Recognizing Refactoring Needs:** Regularly assess the codebase for potential
-  refactoring opportunities. Consider refactoring when observing:
+  refactoring opportunities. Consider refactoring when you observe:
   - **Long Methods/Functions:** Functions or methods that are excessively long
     or try to do too many things.
   - **Duplicated Code:** Identical or very similar code blocks appearing in
@@ -169,7 +167,7 @@ project:
 - Lint rule suppressions must be tightly scoped and include a clear reason.
 - Prefer `expect` over `allow`.
 - Use `rstest` fixtures for shared setup.
-- Replace duplicated tests with `#[rstest(...)]` parameterized cases.
+- Replace duplicated tests with `#[rstest(...)]` parameterised cases.
 - Prefer `mockall` for mocks/stubs.
 - Prefer `.expect()` over `.unwrap()`.
 - Use `concat!()` to combine long string literals rather than escaping newlines
@@ -195,13 +193,13 @@ project:
   `into_inner()` and `to_path_buf()`; avoid attempting
   `impl From<Wrapper> for PathBuf` because of the orphan rule. Prefer explicit
   tuple structs whenever bespoke validation or tailored trait surfaces are
-  required, customizing `Deref`, `AsRef`, and `TryFrom` per type. Use
+  required, customising `Deref`, `AsRef`, and `TryFrom` per type. Use
   `the-newtype` when defining traits and needing blanket implementations that
   apply across wrappers satisfying `Newtype + AsRef/AsMut<Inner>`, or when
   establishing a coherent internal convention that keeps trait forwarding
   consistent without per-type boilerplate. Combine approaches: lean on
   `newt-hype` for the common case, tuple structs for outliers, and
-  `the-newtype` to unify behaviour when owning the trait definitions.
+  `the-newtype` to unify behaviour when you own the trait definitions.
 
 ### Dependency Management
 
