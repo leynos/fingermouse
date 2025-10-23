@@ -39,6 +39,7 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
+    #[case("", b"\r\n")]
     #[case("status", b"status\r\n")]
     #[case("status\r\n", b"status\r\n")]
     #[case("status\r", b"status\r\n")]
