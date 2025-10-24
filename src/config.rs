@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
+use indexmap::IndexSet;
 use object_store::{ObjectStore, local::LocalFileSystem};
 use tracing::warn;
 
@@ -62,7 +63,7 @@ pub struct ServerConfig {
     /// Default hostname used when queries omit one.
     pub default_host: HostName,
     /// Hostnames that the server will respond to.
-    pub allowed_hosts: Vec<HostName>,
+    pub allowed_hosts: IndexSet<HostName>,
     /// Root directory used for the object store backend.
     pub store_root: PathBuf,
     /// Subdirectory containing profile TOML files.
@@ -85,7 +86,7 @@ impl ServerConfig {
         let default_host = HostName::parse(&cli.default_host)
             .map_err(|err| anyhow!("invalid default host: {}", describe_identity(&err)))?;
 
-        let mut allowed_hosts = vec![default_host.clone()];
+        let mut allowed_hosts: IndexSet<HostName> = IndexSet::from([default_host.clone()]);
         if let Some(list) = cli.allowed_hosts {
             extend_allowed_hosts(&list, &mut allowed_hosts)?;
         }
@@ -161,8 +162,8 @@ fn sanitise_prefix(input: &str) -> String {
     input.trim_matches('/').to_owned()
 }
 
-fn extend_allowed_hosts(list: &str, allowed_hosts: &mut Vec<HostName>) -> Result<()> {
-    // Preserve caller supplied ordering while avoiding duplicates so the default
+fn extend_allowed_hosts(list: &str, allowed_hosts: &mut IndexSet<HostName>) -> Result<()> {
+    // Preserve caller supplied ordering while deduplicating entries so the default
     // host remains the first entry.
     for candidate in list
         .split(',')
@@ -171,10 +172,7 @@ fn extend_allowed_hosts(list: &str, allowed_hosts: &mut Vec<HostName>) -> Result
     {
         let host = HostName::parse(candidate)
             .map_err(|err| anyhow!("invalid host in allow list: {}", describe_identity(&err)))?;
-        if allowed_hosts.contains(&host) {
-            continue;
-        }
-        allowed_hosts.push(host);
+        allowed_hosts.insert(host);
     }
     Ok(())
 }

@@ -220,6 +220,7 @@ mod tests {
     use anyhow::{Result, anyhow};
     use futures::FutureExt;
     use futures::future::BoxFuture;
+    use indexmap::IndexSet;
     use rstest::rstest;
     use std::path::PathBuf;
     use std::time::Duration;
@@ -247,7 +248,7 @@ mod tests {
         Ok(Arc::new(ServerConfig {
             listen,
             default_host: default_host.clone(),
-            allowed_hosts: vec![default_host],
+            allowed_hosts: IndexSet::from([default_host]),
             store_root: PathBuf::from("."),
             profile_prefix: "profiles".to_owned(),
             plan_prefix: "plans".to_owned(),
