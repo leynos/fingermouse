@@ -159,7 +159,7 @@ fn ensure_directory(path: &Path) -> Result<()> {
 }
 
 fn sanitise_prefix(input: &str) -> String {
-    input.trim_matches('/').to_owned()
+    input.trim().trim_matches('/').to_owned()
 }
 
 fn extend_allowed_hosts(list: &str, allowed_hosts: &mut IndexSet<HostName>) -> Result<()> {
