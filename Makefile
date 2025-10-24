@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint fmt check-fmt check typecheck markdownlint nixie
+.PHONY: help all clean test build release lint fmt check-fmt typecheck markdownlint nixie
 
 APP ?= fingermouse
 CARGO ?= cargo
@@ -22,13 +22,10 @@ target/%/$(APP): ## Build binary in debug or release mode
 	$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release) --bin $(APP)
 
 lint: ## Run Clippy with warnings denied
-	$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
+	$(CARGO) clippy --all-targets --all-features -- -D warnings
 
-check: ## Run cargo check for fast no-link verification
-	$(CARGO) check --workspace --all-targets $(BUILD_JOBS)
-
-typecheck: ## Alias for cargo check to satisfy CI scripts
-	$(MAKE) check
+typecheck: ## Run cargo check for fast no-link verification
+	$(CARGO) check --all-targets $(BUILD_JOBS)
 
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) fmt --all
