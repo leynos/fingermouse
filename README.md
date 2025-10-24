@@ -25,10 +25,10 @@ environment variables:
   `0.0.0.0:7979`).
 - `--default-host` / `FINGERMOUSE_DEFAULT_HOST`: hostname returned when the
   client omits one (default `localhost`).
-- `--allowed-hosts` / `FINGERMOUSE_ALLOWED_HOSTS`: comma separated list of
+- `--allowed-hosts` / `FINGERMOUSE_ALLOWED_HOSTS`: comma-separated list of
   hostnames Fingermouse serves (defaults to the value of `default-host`).
 - `--store-root` / `FINGERMOUSE_STORE_ROOT`: filesystem root used by the
-  object store (default `./data`). The path is created when missing.
+  object store (default `./data`). The path is created if missing.
 - `--profile-prefix` / `FINGERMOUSE_PROFILE_PREFIX`: directory containing
   `<username>.toml` profile files (default `profiles`).
 - `--plan-prefix` / `FINGERMOUSE_PLAN_PREFIX`: directory containing
