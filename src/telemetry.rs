@@ -105,17 +105,28 @@ async fn handle_accept(
     handle: &PrometheusHandle,
 ) {
     match accepted {
-        Ok((mut socket, peer)) => {
-            if let Err(err) = discard_request(&mut socket).await {
-                warn!(peer = ?peer, error = ?err, "failed to read metrics request");
-                return;
-            }
-            if let Err(err) = respond_with_metrics(handle, &mut socket).await {
-                warn!(peer = ?peer, error = ?err, "failed to respond with metrics");
-            }
-        }
-        Err(err) => warn!(error = ?err, "metrics accept failed"),
+        Ok((mut socket, peer)) => handle_connection(&mut socket, peer, handle).await,
+        Err(err) => handle_accept_error(err).await,
     }
+}
+
+async fn handle_connection(
+    socket: &mut tokio::net::TcpStream,
+    peer: SocketAddr,
+    handle: &PrometheusHandle,
+) {
+    if let Err(err) = discard_request(socket).await {
+        warn!(peer = ?peer, error = ?err, "failed to read metrics request");
+        return;
+    }
+    if let Err(err) = respond_with_metrics(handle, socket).await {
+        warn!(peer = ?peer, error = ?err, "failed to respond with metrics");
+    }
+}
+
+async fn handle_accept_error(err: std::io::Error) {
+    warn!(error = ?err, "metrics accept failed");
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 }
 
 async fn discard_request(socket: &mut tokio::net::TcpStream) -> std::io::Result<()> {
