@@ -142,10 +142,10 @@ where
             .clone()
             .unwrap_or_else(|| self.config.default_host.clone());
         let payload = self.build_response(query, host).await;
-        stream
-            .write_all(&payload)
+        let write_result = timeout(self.config.request_timeout, stream.write_all(&payload))
             .await
-            .context("sending response")?;
+            .context("response write timeout")?;
+        write_result.context("sending response")?;
         Ok(())
     }
 
@@ -197,10 +197,11 @@ where
     }
 
     async fn write_response(&self, stream: &mut TcpStream, message: &str) -> Result<()> {
-        stream
-            .write_all(&render_message(message))
+        let payload = render_message(message);
+        let write_result = timeout(self.config.request_timeout, stream.write_all(&payload))
             .await
-            .context("writing response")?;
+            .context("response write timeout")?;
+        write_result.context("writing response")?;
         Ok(())
     }
 }
