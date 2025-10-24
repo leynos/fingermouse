@@ -2,7 +2,7 @@
 
 ## Code Style and Structure
 
-- **Code is for humans.** Write your code with clarity and empathy—assume a
+- **Code is for humans.** Write code with clarity and empathy—assume a
   tired teammate will need to debug it at 3 a.m.
 - **Comment *why*, not *what*.** Explain assumptions, edge cases, trade-offs, or
   complexity. Don't echo the obvious.
@@ -22,8 +22,8 @@
 - **Group by feature, not layer.** Colocate views, logic, fixtures, and helpers
   related to a domain concept rather than splitting by type.
 - **Use consistent spelling and grammar.** Comments must use en-GB-oxendict
-  ("-ize" / "-yse" / "-our") spelling and grammar, with the exception of
-  references to external APIs.
+  ("-ize" / "-yse" / "-our") spelling and grammar, except for references to
+  external APIs.
 - **Illustrate with clear examples.** Function documentation must include clear
   examples demonstrating the usage and outcome of the function. Test
   documentation should omit examples where the example serves only to reiterate
@@ -43,8 +43,8 @@
   relevant file(s) in the `docs/` directory to reflect the latest state.
   **Ensure the documentation remains accurate and current.**
 - Documentation must use en-GB-oxendict ("-ize" / "-yse" / "-our") spelling
-  and grammar. (EXCEPTION: the naming of the "LICENSE" file, which is to be
-  left unchanged for community consistency.)
+  and grammar. (EXCEPTION: the LICENSE filename is left unchanged for community
+  consistency.)
 - A documentation style guide is provided at
   `docs/documentation-style-guide.md`.
 
@@ -81,7 +81,7 @@
 ## Refactoring Heuristics & Workflow
 
 - **Recognizing Refactoring Needs:** Regularly assess the codebase for potential
-  refactoring opportunities. Consider refactoring when you observe:
+  refactoring opportunities. Perform refactoring when observing:
   - **Long Methods/Functions:** Functions or methods that are excessively long
     or try to do too many things.
   - **Duplicated Code:** Identical or very similar code blocks appearing in
@@ -105,7 +105,7 @@
 - **Separate Atomic Refactors:** If refactoring is deemed necessary:
   - Perform the refactoring as a **separate, atomic commit** *after* the
     functional change commit.
-  - Ensure the refactoring adheres to the testing guidelines (behavioral tests
+  - Ensure refactoring adheres to the testing guidelines (behavioural tests
     pass before and after, unit tests added for new units).
   - Ensure the refactoring commit itself passes all quality gates.
 
@@ -169,11 +169,11 @@ project:
 - Lint rule suppressions must be tightly scoped and include a clear reason.
 - Prefer `expect` over `allow`.
 - Use `rstest` fixtures for shared setup.
-- Replace duplicated tests with `#[rstest(...)]` parameterised cases.
+- Replace duplicated tests with `#[rstest(...)]` parameterized cases.
 - Prefer `mockall` for mocks/stubs.
 - Use `concat!()` to combine long string literals rather than escaping newlines
   with a backslash.
-- Prefer single line versions of functions where appropriate. I.e.,
+- Prefer single line versions of functions where appropriate. i.e.,
 
   ```rust
   pub fn new(id: u64) -> Self { Self(id) }
@@ -190,17 +190,17 @@ project:
 - Use NewTypes to model domain values and eliminate "integer soup". Reach for
   `newt-hype` when introducing many homogeneous wrappers that share behaviour;
   add small shims such as `From<&str>` and `AsRef<str>` for string-backed
-  wrappers. For path-centric wrappers implement `AsRef<Path>` alongside
-  `into_inner()` and `to_path_buf()`,; avoid attempting
+  wrappers. For path-centric wrappers, implement `AsRef<Path>` alongside
+  `into_inner()` and `to_path_buf()`, avoid attempting
   `impl From<Wrapper> for PathBuf` because of the orphan rule. Prefer explicit
   tuple structs whenever bespoke validation or tailored trait surfaces are
-  required, customising `Deref`, `AsRef`, and `TryFrom` per type. Use
+  required, customizing `Deref`, `AsRef`, and `TryFrom` per type. Use
   `the-newtype` when defining traits and needing blanket implementations that
   apply across wrappers satisfying `Newtype + AsRef/AsMut<Inner>`, or when
   establishing a coherent internal convention that keeps trait forwarding
   consistent without per-type boilerplate. Combine approaches: lean on
   `newt-hype` for the common case, tuple structs for outliers, and
-  `the-newtype` to unify behaviour when you own the trait definitions.
+  `the-newtype` to unify behaviour when owning the trait definitions.
 
 ### Dependency Management
 
@@ -211,7 +211,7 @@ project:
   changes from new major versions. This approach is critical for ensuring build
   stability and reproducibility.
 - **Prohibit unstable version specifiers.** The use of wildcard (`*`) or
-  open-ended inequality (`>=`) version requirements is strictly forbidden as
+  open-ended inequality (`>=`) version requirements is strictly forbidden, as
   they introduce unacceptable risk and unpredictability. Tilde requirements
   (`~`) should only be used where a dependency must be locked to patch-level
   updates for a specific, documented reason.
@@ -226,13 +226,13 @@ project:
 - **Never export the opaque type from a library**. Convert to domain enums at
   API boundaries, and to `eyre` only in the main `main()` entrypoint or
   top-level async task.
-- Prefer `.expect()` over `.unwrap()`. `.expect()` is forbidden outside of
-  tests.
-- Make fixtures **fallible**: return `Result` and use `?` to propagate errors.
+- In tests, prefer `.expect(...)` over `.unwrap()` for clearer failure
+  diagnostics; in production code and shared fixtures, return `Result` and use
+  `?` to propagate errors instead of calling `.expect()`.
 - Keep `expect_used` **strict**; do not suppress the lint.
-- Recognise that `allow-expect-in-tests = true` **doesn’t cover** helpers
+- Recognize that `allow-expect-in-tests = true` **doesn’t cover** helpers
   outside `#[cfg(test)]` or `#[test]`; avoid `expect` in such fixtures.
-- Use `anyhow`/`eyre` with `.context(...)` to **preserve backtraces** and
+- Use `anyhow`/`eyre` with `.context(…)` to **preserve backtraces** and
   provide clear, typed failure paths.
 - Update helpers (e.g., `set_dir`) to **return errors** rather than panicking.
 - Consume fallible fixtures in `rstest` by **making the test return `Result`**
