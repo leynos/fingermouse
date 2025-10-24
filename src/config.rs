@@ -43,6 +43,9 @@ pub struct CliOptions {
     /// Maximum number of client entries retained in the rate limiter.
     #[arg(long, env = "FINGERMOUSE_RATE_CAPACITY", default_value_t = 8192)]
     pub rate_capacity: usize,
+    /// Socket address that serves Prometheus metrics; disabled when omitted.
+    #[arg(long, env = "FINGERMOUSE_METRICS_LISTEN")]
+    pub metrics_listen: Option<SocketAddr>,
     /// Timeout in milliseconds for reading the client query line.
     #[arg(long, env = "FINGERMOUSE_REQUEST_TIMEOUT_MS", default_value_t = 3000)]
     pub request_timeout_ms: u64,
@@ -68,6 +71,8 @@ pub struct ServerConfig {
     pub plan_prefix: String,
     /// Rate limiting settings applied per client IP.
     pub rate: RateLimitSettings,
+    /// Address that exposes Prometheus metrics, if configured.
+    pub metrics_listen: Option<SocketAddr>,
     /// Maximum time spent waiting for a client query.
     pub request_timeout: Duration,
     /// Maximum query size accepted from a client.
@@ -116,6 +121,7 @@ impl ServerConfig {
             profile_prefix: sanitise_prefix(&cli.profile_prefix),
             plan_prefix: sanitise_prefix(&cli.plan_prefix),
             rate,
+            metrics_listen: cli.metrics_listen,
             request_timeout: Duration::from_millis(cli.request_timeout_ms.max(1)),
             max_request_bytes,
         })

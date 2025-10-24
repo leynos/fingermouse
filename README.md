@@ -39,6 +39,8 @@ environment variables:
   limiting window (default `60`).
 - `--rate-capacity` / `FINGERMOUSE_RATE_CAPACITY`: maximum distinct client IPs
   retained before eviction (default `8192`).
+- `--metrics-listen` / `FINGERMOUSE_METRICS_LISTEN`: optional socket address
+  that exposes Prometheus metrics (disabled by default).
 - `--request-timeout-ms` / `FINGERMOUSE_REQUEST_TIMEOUT_MS`: read timeout for
   client queries (default `3000`).
 - `--max-request-bytes` / `FINGERMOUSE_MAX_REQUEST_BYTES`: maximum accepted

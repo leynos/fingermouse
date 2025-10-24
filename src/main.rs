@@ -7,6 +7,7 @@ mod query;
 mod rate_limit;
 mod server;
 mod storage;
+mod telemetry;
 mod user;
 
 use std::sync::Arc;
@@ -25,6 +26,7 @@ async fn main() -> Result<()> {
 
     let cli = CliOptions::parse();
     let config = ServerConfig::from_cli(cli)?;
+    let metrics_endpoint = telemetry::install_metrics(config.metrics_listen).await?;
     let store = config.build_store()?;
 
     let repository = ObjectStoreUserStore::new(
@@ -38,7 +40,13 @@ async fn main() -> Result<()> {
     let repository_arc = Arc::new(repository);
 
     let server = FingerServer::new(config_arc, repository_arc, limiter);
-    server.run().await
+    let result = server.run().await;
+
+    if let Some(endpoint) = metrics_endpoint {
+        endpoint.shutdown().await?;
+    }
+
+    result
 }
 
 fn install_tracing() {

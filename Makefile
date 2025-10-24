@@ -27,6 +27,9 @@ lint: ## Run Clippy with warnings denied
 check: ## Run cargo check for fast no-link verification
 	$(CARGO) check --workspace --all-targets $(BUILD_JOBS)
 
+typecheck: ## Alias for cargo check to satisfy CI scripts
+	$(MAKE) check
+
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) fmt --all
 	mdformat-all

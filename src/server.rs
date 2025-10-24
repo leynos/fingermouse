@@ -256,6 +256,7 @@ mod tests {
                 window: Duration::from_secs(60),
                 max_entries: 8192,
             },
+            metrics_listen: None,
             request_timeout: Duration::from_secs(5),
             max_request_bytes: 512,
         }))
