@@ -143,13 +143,17 @@ async fn respond_with_metrics(
     socket: &mut tokio::net::TcpStream,
 ) -> Result<()> {
     let body = handle.render();
-    let response = format!(
-        "HTTP/1.1 200 OK\r\ncontent-type: text/plain; version=0.0.4\r\ncontent-length: {}\r\ncache-control: no-cache\r\n\r\n{}",
-        body.len(),
-        body,
+    let body_bytes = body.as_bytes();
+    let headers = format!(
+        "HTTP/1.1 200 OK\r\ncontent-type: text/plain; version=0.0.4\r\ncache-control: no-cache\r\nconnection: close\r\ncontent-length: {}\r\n\r\n",
+        body_bytes.len(),
     );
     socket
-        .write_all(response.as_bytes())
+        .write_all(headers.as_bytes())
+        .await
+        .context("failed to stream metrics headers")?;
+    socket
+        .write_all(body_bytes)
         .await
         .context("failed to stream metrics payload")?;
     socket
