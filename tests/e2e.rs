@@ -1,8 +1,7 @@
 //! End-to-end tests for the fingermouse daemon binary.
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow, bail, ensure};
 use assert_cmd::cargo::CommandCargoExt;
-use predicates::prelude::*;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
@@ -36,11 +35,8 @@ impl Drop for TestContext {
             return;
         }
 
-        if let Err(err) = self.server_process.kill() {
-            eprintln!("failed to kill fingermouse process: {err}");
-        }
-
-        let _ = self.server_process.wait();
+        if let Err(_err) = self.server_process.kill() {}
+        if self.server_process.wait().is_err() {}
     }
 }
 
@@ -116,7 +112,9 @@ fn wait_for_server(addr: SocketAddr) -> Result<()> {
     while Instant::now() < deadline {
         match TcpStream::connect(addr) {
             Ok(stream) => {
-                let _ = stream.shutdown(Shutdown::Both);
+                stream
+                    .shutdown(Shutdown::Both)
+                    .context("failed to close readiness probe connection")?;
                 return Ok(());
             }
             Err(_) => thread::sleep(SERVER_RETRY_DELAY),
@@ -152,40 +150,87 @@ fn query_server(addr: SocketAddr, query: &str) -> Result<String> {
 }
 
 #[test]
-fn test_query_user_direct_connection() -> Result<()> {
+fn test_direct_query_includes_basic_profile_details() -> Result<()> {
     let ctx = setup_server()?;
 
-    let response_alice = query_server(ctx.server_addr, "alice")?;
-    let alice_predicate =
-        predicates::str::contains("User: alice").and(predicates::str::contains("Alice Example"));
-    assert!(
-        alice_predicate.eval(&response_alice),
-        "unexpected response: {response_alice:?}"
+    let response = query_server(ctx.server_addr, "alice")?;
+    ensure!(
+        response.contains("User: alice"),
+        "missing username in response: {response:?}"
     );
-    assert!(
-        response_alice.contains("Email: alice@test.host"),
-        "expected email field in response: {response_alice:?}"
+    ensure!(
+        response.contains("Full name: Alice Example"),
+        "missing full name in response: {response:?}"
     );
-    assert!(
-        !response_alice.contains("Plan:"),
-        "non-verbose query should not include plan: {response_alice:?}"
+    ensure!(
+        response.contains("Email: alice@test.host"),
+        "missing email field in response: {response:?}"
+    );
+    ensure!(
+        !response.contains("Plan:"),
+        "non-verbose query should not include plan: {response:?}"
     );
 
-    let response_alice_verbose = query_server(ctx.server_addr, "/W alice@test.host")?;
-    assert!(response_alice_verbose.contains("User: alice"));
-    assert!(response_alice_verbose.contains("Plan:"));
-    assert!(response_alice_verbose.contains("Alice's Plan"));
-    assert!(response_alice_verbose.contains("Line 2"));
+    Ok(())
+}
 
-    let response_bob_verbose = query_server(ctx.server_addr, "/W bob")?;
-    assert!(response_bob_verbose.contains("User: bob"));
-    assert!(response_bob_verbose.contains("(no plan)"));
+#[test]
+fn test_verbose_query_returns_plan_content() -> Result<()> {
+    let ctx = setup_server()?;
 
-    let response_missing = query_server(ctx.server_addr, "charlie")?;
-    assert!(response_missing.contains(USER_MISSING));
+    let response = query_server(ctx.server_addr, "/W alice@test.host")?;
+    ensure!(
+        response.contains("User: alice"),
+        "missing username in verbose response: {response:?}"
+    );
+    ensure!(
+        response.contains("Plan:"),
+        "verbose response missing plan header: {response:?}"
+    );
+    ensure!(
+        response.contains("Alice's Plan"),
+        "verbose response missing plan contents: {response:?}"
+    );
+    ensure!(
+        response.contains("Line 2"),
+        "verbose response missing trailing plan line: {response:?}"
+    );
 
-    let response_bad_host = query_server(ctx.server_addr, "alice@wrong.host")?;
-    assert!(response_bad_host.contains(HOST_MISMATCH));
+    Ok(())
+}
+
+#[test]
+fn test_verbose_query_reports_missing_plan() -> Result<()> {
+    let ctx = setup_server()?;
+
+    let response = query_server(ctx.server_addr, "/W bob")?;
+    ensure!(
+        response.contains("User: bob"),
+        "missing username for bob response: {response:?}"
+    );
+    ensure!(
+        response.contains("(no plan)"),
+        "expected missing plan marker: {response:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_query_handles_unknown_user_and_host_mismatch() -> Result<()> {
+    let ctx = setup_server()?;
+
+    let missing_response = query_server(ctx.server_addr, "charlie")?;
+    ensure!(
+        missing_response.contains(USER_MISSING),
+        "missing user sentinel in response: {missing_response:?}"
+    );
+
+    let host_response = query_server(ctx.server_addr, "alice@wrong.host")?;
+    ensure!(
+        host_response.contains(HOST_MISMATCH),
+        "missing host mismatch sentinel in response: {host_response:?}"
+    );
 
     Ok(())
 }
@@ -196,7 +241,7 @@ struct TcpProxy {
 }
 
 impl TcpProxy {
-    fn address(&self) -> SocketAddr {
+    const fn address(&self) -> SocketAddr {
         self.local_addr
     }
 
@@ -232,9 +277,7 @@ async fn spawn_passthrough_proxy(upstream: SocketAddr) -> Result<TcpProxy> {
         .context("failed to bind proxy listener")?;
     let local_addr = listener.local_addr()?;
     let task = tokio::spawn(async move {
-        if let Err(err) = run_passthrough_proxy(listener, upstream).await {
-            eprintln!("passthrough proxy failed: {err}");
-        }
+        if let Err(_err) = run_passthrough_proxy(listener, upstream).await {}
     });
     Ok(TcpProxy {
         local_addr,
@@ -250,13 +293,10 @@ async fn run_passthrough_proxy(listener: TokioTcpListener, upstream: SocketAddr)
             .context("failed to accept client connection")?;
         let mut outbound = match TokioTcpStream::connect(upstream).await {
             Ok(stream) => stream,
-            Err(err) => {
-                eprintln!("proxy failed to connect to upstream: {err}");
-                continue;
-            }
+            Err(_err) => continue,
         };
         tokio::spawn(async move {
-            let _ = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
+            if let Err(_err) = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await {}
         });
     }
 }
@@ -267,9 +307,7 @@ async fn spawn_fault_injecting_proxy(upstream: SocketAddr, payload: Vec<u8>) -> 
         .context("failed to bind fault proxy listener")?;
     let local_addr = listener.local_addr()?;
     let task = tokio::spawn(async move {
-        if let Err(err) = run_fault_injecting_proxy(listener, upstream, payload).await {
-            eprintln!("fault proxy failed: {err}");
-        }
+        if let Err(_err) = run_fault_injecting_proxy(listener, upstream, payload).await {}
     });
     Ok(TcpProxy {
         local_addr,
@@ -277,37 +315,50 @@ async fn spawn_fault_injecting_proxy(upstream: SocketAddr, payload: Vec<u8>) -> 
     })
 }
 
-async fn run_fault_injecting_proxy(
-    listener: TokioTcpListener,
-    upstream: SocketAddr,
-    payload: Vec<u8>,
-) -> Result<()> {
-    let (mut client, _) = listener
+async fn accept_proxy_client(listener: &TokioTcpListener) -> Result<TokioTcpStream> {
+    let (client, _) = listener
         .accept()
         .await
         .context("failed to accept client connection")?;
-    let mut server = TokioTcpStream::connect(upstream)
-        .await
-        .context("failed to connect to upstream server")?;
+    Ok(client)
+}
 
-    // Read and discard the client's query to simulate the proxy mutating it.
+async fn connect_upstream_server(upstream: SocketAddr) -> Result<TokioTcpStream> {
+    TokioTcpStream::connect(upstream)
+        .await
+        .context("failed to connect to upstream server")
+}
+
+async fn discard_client_query(client: &mut TokioTcpStream) -> Result<()> {
     let mut buf = [0_u8; 1];
-    while let Ok(read) = client.read(&mut buf).await {
+    loop {
+        let read = client
+            .read(&mut buf)
+            .await
+            .context("failed to read client query")?;
         if read == 0 || buf[0] == b'\n' {
-            break;
+            return Ok(());
         }
     }
+}
 
+async fn send_injected_payload(server: &mut TokioTcpStream, payload: &[u8]) -> Result<()> {
     server
-        .write_all(&payload)
+        .write_all(payload)
         .await
         .context("failed to send injected payload")?;
     server
         .shutdown()
         .await
         .context("failed to close upstream write half")?;
+    Ok(())
+}
 
-    tokio::io::copy(&mut server, &mut client)
+async fn relay_server_response(
+    server: &mut TokioTcpStream,
+    client: &mut TokioTcpStream,
+) -> Result<()> {
+    tokio::io::copy(server, client)
         .await
         .context("failed to relay server response")?;
     client
@@ -315,6 +366,19 @@ async fn run_fault_injecting_proxy(
         .await
         .context("failed to close client connection")?;
     Ok(())
+}
+
+async fn run_fault_injecting_proxy(
+    listener: TokioTcpListener,
+    upstream: SocketAddr,
+    payload: Vec<u8>,
+) -> Result<()> {
+    let mut client = accept_proxy_client(&listener).await?;
+    let mut server = connect_upstream_server(upstream).await?;
+
+    discard_client_query(&mut client).await?;
+    send_injected_payload(&mut server, &payload).await?;
+    relay_server_response(&mut server, &mut client).await
 }
 
 async fn query_proxy(addr: SocketAddr, query: &str) -> Result<String> {
@@ -339,7 +403,7 @@ async fn query_proxy(addr: SocketAddr, query: &str) -> Result<String> {
         .read_to_end(&mut buffer)
         .await
         .context("failed to read proxy response")?;
-    Ok(String::from_utf8(buffer).context("response was not valid UTF-8")?)
+    String::from_utf8(buffer).context("response was not valid UTF-8")
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -348,15 +412,26 @@ async fn test_query_user_via_proxy() -> Result<()> {
     let proxy = spawn_passthrough_proxy(ctx.server_addr).await?;
 
     let response_alice = query_proxy(proxy.address(), "alice@test.host").await?;
-    assert!(response_alice.contains("User: alice"));
-    assert!(response_alice.contains("Full name: Alice Example"));
+    ensure!(
+        response_alice.contains("User: alice"),
+        "missing username in proxied response: {response_alice:?}"
+    );
+    ensure!(
+        response_alice.contains("Full name: Alice Example"),
+        "missing full name in proxied response: {response_alice:?}"
+    );
 
     let response_bob = query_proxy(proxy.address(), "/W bob").await?;
-    assert!(response_bob.contains("User: bob"));
-    assert!(response_bob.contains("(no plan)"));
+    ensure!(
+        response_bob.contains("User: bob"),
+        "missing username in proxied response: {response_bob:?}"
+    );
+    ensure!(
+        response_bob.contains("(no plan)"),
+        "missing empty plan marker in proxied response: {response_bob:?}"
+    );
 
-    proxy.shutdown().await?;
-    Ok(())
+    proxy.shutdown().await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -377,11 +452,10 @@ async fn test_server_rejects_large_query() -> Result<()> {
     client.read_to_end(&mut buffer).await?;
     let response = String::from_utf8_lossy(&buffer);
 
-    assert!(
+    ensure!(
         response.trim().is_empty() || response.contains(GENERIC_ERROR),
         "expected generic error or disconnect, got {response:?}"
     );
 
-    proxy.shutdown().await?;
-    Ok(())
+    proxy.shutdown().await
 }
