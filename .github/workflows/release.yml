@@ -1,0 +1,227 @@
+name: Release Binary
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  REPO_NAME: ${{ github.event.repository.name }}
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            ext: ""
+          - arch: aarch64
+            target: aarch64-unknown-linux-gnu
+            ext: ""
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9  # v1.12.0
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Cache cross binary
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: ~/.cargo/bin/cross
+          key: cross-${{ runner.os }}
+      - name: Install cross
+        run: cargo install cross --version "0.2.5"
+      - name: Cache cargo registry
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Build release binary
+        run: cross +stable build --release --target ${{ matrix.target }}
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifacts/linux-${{ matrix.arch }}
+          cp target/${{ matrix.target }}/release/${{ env.REPO_NAME }}${{ matrix.ext }} \
+            artifacts/linux-${{ matrix.arch }}/${{ env.REPO_NAME }}-${{ matrix.target }}${{ matrix.ext }}
+          sha256sum artifacts/linux-${{ matrix.arch }}/${{ env.REPO_NAME }}-${{ matrix.target }}${{ matrix.ext }} > \
+            artifacts/linux-${{ matrix.arch }}/${{ env.REPO_NAME }}-${{ matrix.target }}${{ matrix.ext }}.sha256
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ${{ env.REPO_NAME }}-${{ matrix.target }}
+          path: artifacts/linux-${{ matrix.arch }}
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            target: x86_64-apple-darwin
+          - arch: aarch64
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9  # v1.12.0
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifacts/macos-${{ matrix.arch }}
+          cp target/${{ matrix.target }}/release/${{ env.REPO_NAME }} \
+            artifacts/macos-${{ matrix.arch }}/${{ env.REPO_NAME }}-${{ matrix.target }}
+          shasum -a 256 artifacts/macos-${{ matrix.arch }}/${{ env.REPO_NAME }}-${{ matrix.target }} > \
+            artifacts/macos-${{ matrix.arch }}/${{ env.REPO_NAME }}-${{ matrix.target }}.sha256
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ${{ env.REPO_NAME }}-${{ matrix.target }}
+          path: artifacts/macos-${{ matrix.arch }}
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            target: x86_64-pc-windows-msvc
+          - arch: aarch64
+            target: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: actions-rust-lang/setup-rust-toolchain@9d7e65c320fdb52dcd45ffaa68deb6c02c8754d9  # v1.12.0
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Add target
+        shell: pwsh
+        run: rustup target add ${{ matrix.target }}
+      - name: Build release binary
+        shell: pwsh
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Prepare artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/windows-${{ matrix.arch }} | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${env:REPO_NAME}.exe" "artifacts/windows-${{ matrix.arch }}/${env:REPO_NAME}-${{ matrix.target }}.exe"
+          $hash = Get-FileHash "artifacts/windows-${{ matrix.arch }}/${env:REPO_NAME}-${{ matrix.target }}.exe" -Algorithm SHA256
+          ($hash.Hash + "  ${env:REPO_NAME}-${{ matrix.target }}.exe") | Set-Content -Encoding ASCII "artifacts/windows-${{ matrix.arch }}/${env:REPO_NAME}-${{ matrix.target }}.exe.sha256"
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ${{ env.REPO_NAME }}-${{ matrix.target }}
+          path: artifacts/windows-${{ matrix.arch }}
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            target: x86_64-unknown-freebsd
+            artifact_suffix: freebsd-amd64
+          - arch: arm64
+            target: aarch64-unknown-freebsd
+            artifact_suffix: freebsd-arm64
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - name: Build on FreeBSD
+        uses: vmactions/freebsd-vm@9991fc3550abdc19b61d50063c7eeb7713bc498f  # v0.3.1
+        with:
+          release: '13.2'
+          arch: ${{ matrix.arch }}
+          prepare: |
+            pkg install -y rust
+          run: |
+            cd /workdir
+            cargo build --release --target ${{ matrix.target }}
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifacts/${{ matrix.artifact_suffix }}
+          cp target/${{ matrix.target }}/release/${{ env.REPO_NAME }} \
+            artifacts/${{ matrix.artifact_suffix }}/${{ env.REPO_NAME }}-${{ matrix.target }}
+          sha256sum artifacts/${{ matrix.artifact_suffix }}/${{ env.REPO_NAME }}-${{ matrix.target }} > \
+            artifacts/${{ matrix.artifact_suffix }}/${{ env.REPO_NAME }}-${{ matrix.target }}.sha256
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ${{ env.REPO_NAME }}-${{ matrix.target }}
+          path: artifacts/${{ matrix.artifact_suffix }}
+
+  build-openbsd:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            target: x86_64-unknown-openbsd
+            artifact_suffix: openbsd-amd64
+          - arch: arm64
+            target: aarch64-unknown-openbsd
+            artifact_suffix: openbsd-arm64
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - name: Build on OpenBSD
+        uses: vmactions/openbsd-vm@2cbd7618ff813d8235acc5ade8cb5260dcee4502  # v0.1.2
+        with:
+          release: '7.4'
+          arch: ${{ matrix.arch }}
+          prepare: |
+            pkg_add -I rust
+          run: |
+            cd /workdir
+            cargo build --release --target ${{ matrix.target }}
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifacts/${{ matrix.artifact_suffix }}
+          cp target/${{ matrix.target }}/release/${{ env.REPO_NAME }} \
+            artifacts/${{ matrix.artifact_suffix }}/${{ env.REPO_NAME }}-${{ matrix.target }}
+          sha256sum artifacts/${{ matrix.artifact_suffix }}/${{ env.REPO_NAME }}-${{ matrix.target }} > \
+            artifacts/${{ matrix.artifact_suffix }}/${{ env.REPO_NAME }}-${{ matrix.target }}.sha256
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: ${{ env.REPO_NAME }}-${{ matrix.target }}
+          path: artifacts/${{ matrix.artifact_suffix }}
+
+  release:
+    needs:
+      - build-linux
+      - build-macos
+      - build-windows
+      - build-freebsd
+      - build-openbsd
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090  # v2.4.1
+        with:
+          generate_release_notes: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          path: artifacts
+      - run: |
+          for dir in artifacts/${{ env.REPO_NAME }}-*; do
+            for file in "$dir"/*; do
+              gh release upload "${{ github.ref_name }}" "$file"
+            done
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
