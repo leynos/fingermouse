@@ -17,7 +17,7 @@ tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros", "net", "s
 toml = "0.8.19"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt"] }
-dashmap = "5.5.3"
+dashmap = "6.1.0"
 metrics = "0.22.4"
 metrics-exporter-prometheus = "0.13.1"
 
