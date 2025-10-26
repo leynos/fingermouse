@@ -22,8 +22,12 @@ metrics = "0.22.4"
 metrics-exporter-prometheus = "0.13.1"
 
 [dev-dependencies]
+assert_cmd = "2.0.16"
+predicates = "3.1.0"
 rstest = "0.21.0"
 tempfile = "3.10.1"
+third-wheel = "0.2.0"
+portpicker = "0.1.1"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
