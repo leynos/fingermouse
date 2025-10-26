@@ -147,6 +147,8 @@ fn reserve_server_addr() -> Result<SocketAddr> {
 fn spawn_server(root_path: &Path, server_addr: SocketAddr) -> Result<Child> {
     let mut command = build_server_command(root_path, server_addr)?;
     command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .context("failed to spawn fingermouse")
 }
