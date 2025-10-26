@@ -141,7 +141,7 @@ jobs:
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - name: Build on FreeBSD
-        uses: vmactions/freebsd-vm@9991fc3550abdc19b61d50063c7eeb7713bc498f  # v0.3.1
+        uses: vmactions/freebsd-vm@487ce35b96fae3e60d45b521735f5aa436ecfade  # v1.2.4
         with:
           release: '13.2'
           arch: ${{ matrix.arch }}
