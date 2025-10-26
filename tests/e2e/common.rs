@@ -4,7 +4,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use assert_cmd::cargo::CommandCargoExt;
 use std::fs;
 use std::net::SocketAddr;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use tempfile::{Builder, TempDir};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream as TokioTcpStream;
@@ -104,7 +104,11 @@ pub(crate) async fn setup_server() -> Result<TestContext> {
         .arg("--max-request-bytes")
         .arg(MAX_REQUEST_BYTES.to_string());
 
-    let server_process = cmd.spawn().context("failed to spawn fingermouse")?;
+    let server_process = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("failed to spawn fingermouse")?;
 
     wait_for_server(server_addr).await?;
 
