@@ -1,6 +1,7 @@
 //! Direct TCP interactions with the compiled fingermouse binary.
 
 use anyhow::{Result, ensure};
+use rstest::rstest;
 
 use super::common::{HOST_MISMATCH, USER_MISSING, query_server, setup_server};
 
@@ -90,38 +91,23 @@ async fn test_query_handles_unknown_user_and_host_mismatch() -> Result<()> {
     Ok(())
 }
 
+#[rstest]
+#[case("/W ALICE@test.host", "uppercase input")]
+#[case("/W Alice@test.host", "mixed-case input")]
+#[case("   /W alice@test.host", "leading whitespace")]
+#[case("/W alice@test.host   ", "trailing whitespace")]
+#[case("/W    alice@test.host", "collapsed whitespace")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_query_tolerates_case_and_whitespace_variations() -> Result<()> {
+async fn test_query_tolerates_case_and_whitespace_variations(
+    #[case] query: &str,
+    #[case] label: &str,
+) -> Result<()> {
     let ctx = setup_server().await?;
 
-    let uppercase = query_server(ctx.address(), "/W ALICE@test.host").await?;
+    let response = query_server(ctx.address(), query).await?;
     ensure!(
-        uppercase.contains("User: alice"),
-        "uppercase query should match alice: {uppercase:?}"
-    );
-
-    let mixed_case = query_server(ctx.address(), "/W Alice@test.host").await?;
-    ensure!(
-        mixed_case.contains("User: alice"),
-        "mixed-case query should match alice: {mixed_case:?}"
-    );
-
-    let leading_whitespace = query_server(ctx.address(), "   /W alice@test.host").await?;
-    ensure!(
-        leading_whitespace.contains("User: alice"),
-        "leading whitespace should be ignored: {leading_whitespace:?}"
-    );
-
-    let trailing_whitespace = query_server(ctx.address(), "/W alice@test.host   ").await?;
-    ensure!(
-        trailing_whitespace.contains("User: alice"),
-        "trailing whitespace should be ignored: {trailing_whitespace:?}"
-    );
-
-    let internal_whitespace = query_server(ctx.address(), "/W    alice@test.host").await?;
-    ensure!(
-        internal_whitespace.contains("User: alice"),
-        "collapsed whitespace should be tolerated: {internal_whitespace:?}"
+        response.contains("User: alice"),
+        "{label} should resolve to alice: {response:?}"
     );
 
     Ok(())

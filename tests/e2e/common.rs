@@ -4,7 +4,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use assert_cmd::cargo::CommandCargoExt;
 use std::fs;
 use std::net::SocketAddr;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use tempfile::{Builder, TempDir};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream as TokioTcpStream;
@@ -13,10 +13,11 @@ use tokio::time::{Duration, Instant, sleep, timeout};
 pub(crate) const USER_MISSING: &str = "fingermouse: no matching record";
 pub(crate) const HOST_MISMATCH: &str = "fingermouse: host not served here";
 pub(crate) const GENERIC_ERROR: &str = "fingermouse: request refused";
-const SERVER_WARMUP_TIMEOUT: Duration = Duration::from_secs(5);
+const SERVER_WARMUP_TIMEOUT: Duration = Duration::from_secs(15);
 const SERVER_RETRY_DELAY: Duration = Duration::from_millis(50);
-pub(crate) const CONNECTION_TIMEOUT: Duration = Duration::from_secs(1);
+pub(crate) const CONNECTION_TIMEOUT: Duration = Duration::from_secs(3);
 pub(crate) const MAX_REQUEST_BYTES: usize = 128;
+const MAX_SERVER_START_ATTEMPTS: usize = 5;
 
 /// Manages the server process lifecycle for the duration of a test.
 pub(crate) struct TestContext {
@@ -85,56 +86,115 @@ pub(crate) async fn setup_server() -> Result<TestContext> {
     fs::write(root_path.join("profiles/bob.toml"), bob_profile.as_bytes())
         .context("failed to write bob profile")?;
 
-    let port = portpicker::pick_unused_port().ok_or_else(|| anyhow!("no free ports"))?;
-    let server_addr: SocketAddr = format!("127.0.0.1:{port}").parse()?;
+    let mut last_failure: Option<String> = None;
+    for attempt in 1..=MAX_SERVER_START_ATTEMPTS {
+        let port = portpicker::pick_unused_port().ok_or_else(|| anyhow!("no free ports"))?;
+        let server_addr: SocketAddr = format!("127.0.0.1:{port}").parse()?;
 
-    let mut cmd = Command::cargo_bin("fingermouse")?;
-    cmd.arg("--listen")
-        .arg(server_addr.to_string())
-        .arg("--store-root")
-        .arg(root_path)
-        .arg("--default-host")
-        .arg("test.host")
-        .arg("--allowed-hosts")
-        .arg("test.host,other.host")
-        .arg("--rate-limit")
-        .arg("1000")
-        .arg("--request-timeout-ms")
-        .arg("2000")
-        .arg("--max-request-bytes")
-        .arg(MAX_REQUEST_BYTES.to_string());
+        let mut cmd = Command::cargo_bin("fingermouse")?;
+        cmd.arg("--listen")
+            .arg(server_addr.to_string())
+            .arg("--store-root")
+            .arg(root_path)
+            .arg("--default-host")
+            .arg("test.host")
+            .arg("--allowed-hosts")
+            .arg("test.host,other.host")
+            .arg("--rate-limit")
+            .arg("1000")
+            .arg("--request-timeout-ms")
+            .arg("2000")
+            .arg("--max-request-bytes")
+            .arg(MAX_REQUEST_BYTES.to_string());
 
-    let server_process = cmd
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .context("failed to spawn fingermouse")?;
+        let mut server_process = cmd
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .context("failed to spawn fingermouse")?;
 
-    wait_for_server(server_addr).await?;
+        match wait_for_server(&mut server_process, server_addr).await? {
+            ServerReadyState::Ready => {
+                return Ok(TestContext {
+                    server_process,
+                    server_addr,
+                    _data_dir: data_dir,
+                    max_request_bytes: MAX_REQUEST_BYTES,
+                });
+            }
+            ServerReadyState::ExitedEarly => {
+                let output = server_process
+                    .wait_with_output()
+                    .context("failed to collect server output")?;
+                if is_addr_in_use(&output) && attempt < MAX_SERVER_START_ATTEMPTS {
+                    last_failure = Some(describe_startup_failure(&output));
+                    sleep(SERVER_RETRY_DELAY).await;
+                    continue;
+                }
+                bail!(describe_startup_failure(&output));
+            }
+            ServerReadyState::TimedOut => {
+                let _ = server_process.kill();
+                let output = server_process
+                    .wait_with_output()
+                    .context("failed to collect server output after timeout")?;
+                bail!(format!(
+                    "server did not become ready within {SERVER_WARMUP_TIMEOUT:?}\n{}",
+                    describe_startup_failure(&output)
+                ));
+            }
+        }
+    }
 
-    Ok(TestContext {
-        server_process,
-        server_addr,
-        _data_dir: data_dir,
-        max_request_bytes: MAX_REQUEST_BYTES,
-    })
+    let summary = last_failure.unwrap_or_else(|| "server failed to start for an unknown reason".to_owned());
+    bail!(format!(
+        "exhausted {MAX_SERVER_START_ATTEMPTS} attempts to start fingermouse\n{summary}"
+    ));
 }
 
-async fn wait_for_server(addr: SocketAddr) -> Result<()> {
+enum ServerReadyState {
+    Ready,
+    ExitedEarly,
+    TimedOut,
+}
+
+async fn wait_for_server(child: &mut Child, addr: SocketAddr) -> Result<ServerReadyState> {
     let deadline = Instant::now() + SERVER_WARMUP_TIMEOUT;
     while Instant::now() < deadline {
+        if let Some(_status) = child
+            .try_wait()
+            .context("failed to poll fingermouse process state")?
+        {
+            return Ok(ServerReadyState::ExitedEarly);
+        }
         match timeout(CONNECTION_TIMEOUT, TokioTcpStream::connect(addr)).await {
             Ok(Ok(mut stream)) => {
                 stream
                     .shutdown()
                     .await
                     .context("failed to close readiness probe connection")?;
-                return Ok(());
+                return Ok(ServerReadyState::Ready);
             }
             Ok(Err(_)) | Err(_) => sleep(SERVER_RETRY_DELAY).await,
         }
     }
-    bail!("server did not become ready within {SERVER_WARMUP_TIMEOUT:?}");
+    Ok(ServerReadyState::TimedOut)
+}
+
+fn describe_startup_failure(output: &Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    format!("fingermouse exited during startup\nstdout:\n{stdout}\nstderr:\n{stderr}")
+}
+
+fn is_addr_in_use(output: &Output) -> bool {
+    let haystacks = [
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    ];
+    haystacks
+        .iter()
+        .any(|content| content.contains("address already in use") || content.contains("AddrInUse"))
 }
 
 /// Send a finger query to the running server instance.

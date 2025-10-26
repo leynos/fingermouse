@@ -1,18 +1,25 @@
 //! Proxy-based tests exercising passthrough and fault injection flows.
 
-use anyhow::{Context, Result, bail, ensure};
+use anyhow::{bail, ensure, Context, Result};
+use rstest::rstest;
 use std::future::Future;
 use std::net::SocketAddr;
-use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::io::{self, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener as TokioTcpListener, TcpStream as TokioTcpStream};
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
-use tokio::time::timeout;
+use tokio::time::{sleep, timeout};
+use tokio_util::sync::CancellationToken;
 
-use super::common::{CONNECTION_TIMEOUT, GENERIC_ERROR, MAX_REQUEST_BYTES, setup_server};
+use super::common::{setup_server, CONNECTION_TIMEOUT, GENERIC_ERROR, MAX_REQUEST_BYTES};
 
 struct TcpProxy {
     local_addr: SocketAddr,
     task: Option<JoinHandle<()>>,
+    connections: Arc<Mutex<Vec<JoinHandle<()>>>>,
+    cancel: CancellationToken,
 }
 
 impl TcpProxy {
@@ -25,6 +32,13 @@ impl TcpProxy {
     }
 
     async fn shutdown_inner(mut self) -> Result<()> {
+        self.cancel.cancel();
+        let mut connections = self.connections.lock().await;
+        for handle in connections.drain(..) {
+            handle.abort();
+        }
+        drop(connections);
+
         if let Some(task) = self.task.take() {
             task.abort();
             match task.await {
@@ -40,66 +54,114 @@ impl TcpProxy {
 
 impl Drop for TcpProxy {
     fn drop(&mut self) {
+        self.cancel.cancel();
+        if let Ok(mut connections) = self.connections.try_lock() {
+            for handle in connections.drain(..) {
+                handle.abort();
+            }
+        }
         if let Some(task) = &self.task {
             task.abort();
         }
     }
 }
 
-async fn spawn_proxy<F, Fut>(context_msg: &str, runner: F) -> Result<TcpProxy>
+async fn spawn_proxy<F, Fut>(
+    context_msg: &str,
+    runner: F,
+) -> Result<TcpProxy>
 where
-    F: FnOnce(TokioTcpListener) -> Fut + Send + 'static,
+    F: FnOnce(
+            TokioTcpListener,
+            CancellationToken,
+            Arc<Mutex<Vec<JoinHandle<()>>>>,
+        ) -> Fut
+        + Send
+        + 'static,
     Fut: Future<Output = Result<()>> + Send + 'static,
 {
     let listener = TokioTcpListener::bind("127.0.0.1:0")
         .await
         .context(context_msg.to_owned())?;
     let local_addr = listener.local_addr()?;
-    let task = tokio::spawn(async move { if let Err(_err) = runner(listener).await {} });
+    let cancel = CancellationToken::new();
+    let connections: Arc<Mutex<Vec<JoinHandle<()>>>> = Arc::new(Mutex::new(Vec::new()));
+    let runner_cancel = cancel.clone();
+    let runner_connections = Arc::clone(&connections);
+    let task = tokio::spawn(async move {
+        if let Err(_err) = runner(listener, runner_cancel, runner_connections).await {}
+    });
+
     Ok(TcpProxy {
         local_addr,
         task: Some(task),
+        connections,
+        cancel,
     })
 }
 
 async fn spawn_passthrough_proxy(upstream: SocketAddr) -> Result<TcpProxy> {
     spawn_proxy(
         "failed to bind proxy listener",
-        move |listener| async move { run_passthrough_proxy(listener, upstream).await },
+        move |listener, cancel, connections| async move {
+            run_passthrough_proxy(listener, upstream, cancel, connections).await
+        },
     )
     .await
 }
 
-async fn run_passthrough_proxy(listener: TokioTcpListener, upstream: SocketAddr) -> Result<()> {
+async fn run_passthrough_proxy(
+    listener: TokioTcpListener,
+    upstream: SocketAddr,
+    cancel: CancellationToken,
+    connections: Arc<Mutex<Vec<JoinHandle<()>>>>,
+) -> Result<()> {
     loop {
-        let (mut inbound, _) = listener
-            .accept()
-            .await
-            .context("failed to accept client connection")?;
-        let mut outbound = match TokioTcpStream::connect(upstream).await {
-            Ok(stream) => stream,
-            Err(_err) => continue,
-        };
-        tokio::spawn(async move {
-            if let Err(_err) = io::copy_bidirectional(&mut inbound, &mut outbound).await {}
-        });
+        tokio::select! {
+            _ = cancel.cancelled() => break,
+            accept_result = listener.accept() => {
+                let (mut inbound, _) = accept_result
+                    .context("failed to accept client connection")?;
+
+                let mut outbound = match TokioTcpStream::connect(upstream).await {
+                    Ok(stream) => stream,
+                    Err(_err) => {
+                        sleep(Duration::from_millis(50)).await;
+                        continue;
+                    }
+                };
+
+                let task_cancel = cancel.clone();
+                let handle = tokio::spawn(async move {
+                    tokio::select! {
+                        _ = task_cancel.cancelled() => {
+                            let _ = inbound.shutdown().await;
+                            let _ = outbound.shutdown().await;
+                        }
+                        transfer = io::copy_bidirectional(&mut inbound, &mut outbound) => {
+                            if transfer.is_err() {
+                                let _ = inbound.shutdown().await;
+                                let _ = outbound.shutdown().await;
+                            }
+                        }
+                    }
+                });
+                connections.lock().await.push(handle);
+            }
+        }
     }
+
+    Ok(())
 }
 
 async fn spawn_fault_injecting_proxy(upstream: SocketAddr, payload: Vec<u8>) -> Result<TcpProxy> {
     spawn_proxy(
         "failed to bind fault proxy listener",
-        move |listener| async move { run_fault_injecting_proxy(listener, upstream, payload).await },
+        move |listener, cancel, connections| async move {
+            run_fault_injecting_proxy(listener, upstream, payload, cancel, connections).await
+        },
     )
     .await
-}
-
-async fn accept_proxy_client(listener: &TokioTcpListener) -> Result<TokioTcpStream> {
-    let (client, _) = listener
-        .accept()
-        .await
-        .context("failed to accept client connection")?;
-    Ok(client)
 }
 
 async fn connect_upstream_server(upstream: SocketAddr) -> Result<TokioTcpStream> {
@@ -110,23 +172,18 @@ async fn connect_upstream_server(upstream: SocketAddr) -> Result<TokioTcpStream>
 }
 
 async fn discard_client_query(client: &mut TokioTcpStream) -> Result<()> {
-    let mut buf = [0_u8; 1];
-    let mut received = 0_usize;
-    loop {
-        let read = timeout(CONNECTION_TIMEOUT, client.read(&mut buf))
-            .await
-            .context("timed out waiting for client query")??;
-        if read == 0 {
-            bail!("client closed before completing query");
-        }
-        received += read;
-        if received > MAX_REQUEST_BYTES {
-            bail!("client query exceeded maximum length while awaiting newline");
-        }
-        if buf[0] == b'\n' {
-            return Ok(());
-        }
+    let mut reader = BufReader::new(client);
+    let mut buf = Vec::with_capacity(128);
+    let read = timeout(CONNECTION_TIMEOUT, reader.read_until(b'\n', &mut buf))
+        .await
+        .context("timed out waiting for client query")??;
+    if read == 0 {
+        bail!("client closed before completing query");
     }
+    if buf.len() > MAX_REQUEST_BYTES {
+        bail!("client query exceeded maximum length while awaiting newline");
+    }
+    Ok(())
 }
 
 async fn send_injected_payload(server: &mut TokioTcpStream, payload: &[u8]) -> Result<()> {
@@ -155,12 +212,24 @@ async fn relay_server_response(
     Ok(())
 }
 
+/// Runs a single fault-injection cycle: accepts one client, discards its query,
+/// sends the injected payload upstream, and relays the response. The proxy exits
+/// after serving the first client.
 async fn run_fault_injecting_proxy(
     listener: TokioTcpListener,
     upstream: SocketAddr,
     payload: Vec<u8>,
+    cancel: CancellationToken,
+    _connections: Arc<Mutex<Vec<JoinHandle<()>>>>,
 ) -> Result<()> {
-    let mut client = accept_proxy_client(&listener).await?;
+    let mut client = tokio::select! {
+        _ = cancel.cancelled() => return Ok(()),
+        accept_result = listener.accept() => {
+            let (client, _) = accept_result
+                .context("failed to accept client connection")?;
+            client
+        }
+    };
     let mut server = connect_upstream_server(upstream).await?;
 
     discard_client_query(&mut client).await?;
@@ -195,30 +264,24 @@ async fn query_proxy(addr: SocketAddr, query: &str) -> Result<String> {
     String::from_utf8(buffer).context("response was not valid UTF-8")
 }
 
+#[rstest]
+#[case("alice@test.host", &["User: alice", "Full name: Alice Example"])]
+#[case("/W bob", &["User: bob", "(no plan)"])]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn test_query_user_via_proxy() -> Result<()> {
+async fn test_query_user_via_proxy(
+    #[case] query: &str,
+    #[case] expectations: &[&str],
+) -> Result<()> {
     let ctx = setup_server().await?;
     let proxy = spawn_passthrough_proxy(ctx.address()).await?;
 
-    let response_alice = query_proxy(proxy.address(), "alice@test.host").await?;
-    ensure!(
-        response_alice.contains("User: alice"),
-        "missing username in proxied response: {response_alice:?}"
-    );
-    ensure!(
-        response_alice.contains("Full name: Alice Example"),
-        "missing full name in proxied response: {response_alice:?}"
-    );
-
-    let response_bob = query_proxy(proxy.address(), "/W bob").await?;
-    ensure!(
-        response_bob.contains("User: bob"),
-        "missing username in proxied response: {response_bob:?}"
-    );
-    ensure!(
-        response_bob.contains("(no plan)"),
-        "missing empty plan marker in proxied response: {response_bob:?}"
-    );
+    let response = query_proxy(proxy.address(), query).await?;
+    for needle in expectations {
+        ensure!(
+            response.contains(needle),
+            "missing {needle:?} in proxied response: {response:?}"
+        );
+    }
 
     proxy.shutdown().await
 }
@@ -253,9 +316,11 @@ async fn test_server_rejects_large_query() -> Result<()> {
     read_attempt.context("failed to read fault proxy response")?;
     let response = String::from_utf8_lossy(&buffer);
 
+    let trimmed = response.trim();
     ensure!(
-        response.trim().is_empty() || response.contains(GENERIC_ERROR),
-        "expected generic error or disconnect, got {response:?}"
+        trimmed.is_empty() || response.contains(GENERIC_ERROR),
+        "expected generic error or disconnect, got len={} body={response:?}",
+        trimmed.len()
     );
 
     proxy.shutdown().await
