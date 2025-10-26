@@ -1,10 +1,11 @@
 //! Shared fixtures and helpers for the fingermouse end-to-end tests.
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 use assert_cmd::cargo::CommandCargoExt;
 use std::fs;
 use std::net::SocketAddr;
 use std::process::{Child, Command, Output, Stdio};
+use std::path::Path;
 use tempfile::{Builder, TempDir};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream as TokioTcpStream;
@@ -54,64 +55,12 @@ impl Drop for TestContext {
 
 /// Spawn the fingermouse server with a temporary datastore.
 pub(crate) async fn setup_server() -> Result<TestContext> {
-    let data_dir = Builder::new()
-        .prefix("fingermouse-e2e-")
-        .tempdir()
-        .context("failed to create temporary data directory")?;
+    let data_dir = initialise_datastore()?;
     let root_path = data_dir.path();
-
-    fs::create_dir_all(root_path.join("profiles")).context("failed to create profile directory")?;
-    fs::create_dir_all(root_path.join("plans")).context("failed to create plan directory")?;
-
-    let alice_profile = r#"
-        username = "alice"
-        full_name = "Alice Example"
-        email = "alice@test.host"
-    "#;
-    fs::write(
-        root_path.join("profiles/alice.toml"),
-        alice_profile.as_bytes(),
-    )
-    .context("failed to write alice profile")?;
-    fs::write(
-        root_path.join("plans/alice.plan"),
-        b"Alice's Plan\r\nLine 2\r\n",
-    )
-    .context("failed to write alice plan")?;
-
-    let bob_profile = r#"
-        username = "bob"
-        full_name = "Bob Test"
-    "#;
-    fs::write(root_path.join("profiles/bob.toml"), bob_profile.as_bytes())
-        .context("failed to write bob profile")?;
-
     let mut last_failure: Option<String> = None;
     for attempt in 1..=MAX_SERVER_START_ATTEMPTS {
-        let port = portpicker::pick_unused_port().ok_or_else(|| anyhow!("no free ports"))?;
-        let server_addr: SocketAddr = format!("127.0.0.1:{port}").parse()?;
-
-        let mut cmd = Command::cargo_bin("fingermouse")?;
-        cmd.arg("--listen")
-            .arg(server_addr.to_string())
-            .arg("--store-root")
-            .arg(root_path)
-            .arg("--default-host")
-            .arg("test.host")
-            .arg("--allowed-hosts")
-            .arg("test.host,other.host")
-            .arg("--rate-limit")
-            .arg("1000")
-            .arg("--request-timeout-ms")
-            .arg("2000")
-            .arg("--max-request-bytes")
-            .arg(MAX_REQUEST_BYTES.to_string());
-
-        let mut server_process = cmd
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context("failed to spawn fingermouse")?;
+        let server_addr = reserve_server_addr()?;
+        let mut server_process = spawn_server(root_path, server_addr)?;
 
         match wait_for_server(&mut server_process, server_addr).await? {
             ServerReadyState::Ready => {
@@ -150,6 +99,76 @@ pub(crate) async fn setup_server() -> Result<TestContext> {
     bail!(format!(
         "exhausted {MAX_SERVER_START_ATTEMPTS} attempts to start fingermouse\n{summary}"
     ));
+}
+
+fn initialise_datastore() -> Result<TempDir> {
+    let data_dir = Builder::new()
+        .prefix("fingermouse-e2e-")
+        .tempdir()
+        .context("failed to create temporary data directory")?;
+    seed_datastore(data_dir.path())?;
+    Ok(data_dir)
+}
+
+fn seed_datastore(root_path: &Path) -> Result<()> {
+    fs::create_dir_all(root_path.join("profiles")).context("failed to create profile directory")?;
+    fs::create_dir_all(root_path.join("plans")).context("failed to create plan directory")?;
+
+    let alice_profile = r#"
+        username = "alice"
+        full_name = "Alice Example"
+        email = "alice@test.host"
+    "#;
+    fs::write(
+        root_path.join("profiles/alice.toml"),
+        alice_profile.as_bytes(),
+    )
+    .context("failed to write alice profile")?;
+    fs::write(
+        root_path.join("plans/alice.plan"),
+        b"Alice's Plan\r\nLine 2\r\n",
+    )
+    .context("failed to write alice plan")?;
+
+    let bob_profile = r#"
+        username = "bob"
+        full_name = "Bob Test"
+    "#;
+    fs::write(root_path.join("profiles/bob.toml"), bob_profile.as_bytes())
+        .context("failed to write bob profile")?;
+    Ok(())
+}
+
+fn reserve_server_addr() -> Result<SocketAddr> {
+    let port = portpicker::pick_unused_port().ok_or_else(|| anyhow!("no free ports"))?;
+    Ok(format!("127.0.0.1:{port}").parse()?)
+}
+
+fn spawn_server(root_path: &Path, server_addr: SocketAddr) -> Result<Child> {
+    let mut command = build_server_command(root_path, server_addr)?;
+    command
+        .spawn()
+        .context("failed to spawn fingermouse")
+}
+
+fn build_server_command(root_path: &Path, server_addr: SocketAddr) -> Result<Command> {
+    let mut cmd = Command::cargo_bin("fingermouse")?;
+    cmd.arg("--listen")
+        .arg(server_addr.to_string())
+        .arg("--store-root")
+        .arg(root_path)
+        .arg("--default-host")
+        .arg("test.host")
+        .arg("--allowed-hosts")
+        .arg("test.host,other.host")
+        .arg("--rate-limit")
+        .arg("1000")
+        .arg("--request-timeout-ms")
+        .arg("2000")
+        .arg("--max-request-bytes")
+        .arg(MAX_REQUEST_BYTES.to_string());
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    Ok(cmd)
 }
 
 enum ServerReadyState {
