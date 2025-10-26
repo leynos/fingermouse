@@ -177,7 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - name: Build on OpenBSD
-        uses: vmactions/openbsd-vm@2cbd7618ff813d8235acc5ade8cb5260dcee4502  # v0.1.2
+        uses: vmactions/openbsd-vm@bed57f753a75c9c49ab5c1880d274861b2103dd4  # v1.2.1
         with:
           release: '7.4'
           arch: ${{ matrix.arch }}
