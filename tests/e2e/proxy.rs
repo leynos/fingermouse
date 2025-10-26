@@ -1,6 +1,7 @@
 //! Proxy-based tests exercising passthrough and fault injection flows.
 
 use anyhow::{Context, Result, bail, ensure};
+use std::future::Future;
 use std::net::SocketAddr;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener as TokioTcpListener, TcpStream as TokioTcpStream};
@@ -45,18 +46,28 @@ impl Drop for TcpProxy {
     }
 }
 
-async fn spawn_passthrough_proxy(upstream: SocketAddr) -> Result<TcpProxy> {
+async fn spawn_proxy<F, Fut>(context_msg: &str, runner: F) -> Result<TcpProxy>
+where
+    F: FnOnce(TokioTcpListener) -> Fut + Send + 'static,
+    Fut: Future<Output = Result<()>> + Send + 'static,
+{
     let listener = TokioTcpListener::bind("127.0.0.1:0")
         .await
-        .context("failed to bind proxy listener")?;
+        .context(context_msg.to_owned())?;
     let local_addr = listener.local_addr()?;
-    let task = tokio::spawn(async move {
-        if let Err(_err) = run_passthrough_proxy(listener, upstream).await {}
-    });
+    let task = tokio::spawn(async move { if let Err(_err) = runner(listener).await {} });
     Ok(TcpProxy {
         local_addr,
         task: Some(task),
     })
+}
+
+async fn spawn_passthrough_proxy(upstream: SocketAddr) -> Result<TcpProxy> {
+    spawn_proxy(
+        "failed to bind proxy listener",
+        move |listener| async move { run_passthrough_proxy(listener, upstream).await },
+    )
+    .await
 }
 
 async fn run_passthrough_proxy(listener: TokioTcpListener, upstream: SocketAddr) -> Result<()> {
@@ -76,17 +87,11 @@ async fn run_passthrough_proxy(listener: TokioTcpListener, upstream: SocketAddr)
 }
 
 async fn spawn_fault_injecting_proxy(upstream: SocketAddr, payload: Vec<u8>) -> Result<TcpProxy> {
-    let listener = TokioTcpListener::bind("127.0.0.1:0")
-        .await
-        .context("failed to bind fault proxy listener")?;
-    let local_addr = listener.local_addr()?;
-    let task = tokio::spawn(async move {
-        if let Err(_err) = run_fault_injecting_proxy(listener, upstream, payload).await {}
-    });
-    Ok(TcpProxy {
-        local_addr,
-        task: Some(task),
-    })
+    spawn_proxy(
+        "failed to bind fault proxy listener",
+        move |listener| async move { run_fault_injecting_proxy(listener, upstream, payload).await },
+    )
+    .await
 }
 
 async fn accept_proxy_client(listener: &TokioTcpListener) -> Result<TokioTcpStream> {
