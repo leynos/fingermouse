@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.89"
 chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
-clap = { version = "4.5.6", features = ["derive", "env"] }
+clap = { version = "4.5.50", features = ["derive", "env"] }
 futures = "0.3.30"
 indexmap = { version = "2.3.0", features = ["serde"] }
 mockable = { version = "0.1.4", default-features = false, features = ["clock", "mock"] }
