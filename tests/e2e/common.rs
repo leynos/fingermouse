@@ -169,7 +169,6 @@ fn build_server_command(root_path: &Path, server_addr: SocketAddr) -> Result<Com
         .arg("2000")
         .arg("--max-request-bytes")
         .arg(MAX_REQUEST_BYTES.to_string());
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
     Ok(cmd)
 }
 
