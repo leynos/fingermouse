@@ -12,7 +12,7 @@ indexmap = { version = "2.3.0", features = ["serde"] }
 mockable = { version = "0.1.4", default-features = false, features = ["clock", "mock"] }
 object_store = { version = "0.9.1", default-features = false }
 serde = { version = "1.0.210", features = ["derive"] }
-thiserror = "1.0.64"
+thiserror = "2.0.17"
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros", "net", "signal", "time", "io-util"] }
 toml = "0.8.19"
 tracing = "0.1.40"
