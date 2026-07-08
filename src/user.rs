@@ -188,59 +188,34 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn rejects_mismatched_username() -> Result<()> {
+    #[rstest]
+    #[case::mismatched_username(
+        "username = \"bob\"\nfull_name = \"Alice Smith\"\n",
+        |err: &ProfileError| matches!(err, ProfileError::UsernameMismatch)
+    )]
+    #[case::invalid_username_value(
+        "username = \"bad name\"\nfull_name = \"Alice Smith\"\n",
+        |err: &ProfileError| matches!(err, ProfileError::UsernameInvalid(_))
+    )]
+    #[case::missing_username_field(
+        "full_name = \"Alice Smith\"\n",
+        |err: &ProfileError| matches!(err, ProfileError::MissingUsername)
+    )]
+    #[case::non_string_value(
+        "username = \"alice\"\nage = 42\n",
+        |err: &ProfileError| matches!(err, ProfileError::NonStringValue { key } if key == "age")
+    )]
+    #[case::invalid_toml(
+        "username = \"alice\"\nfull_name =",
+        |err: &ProfileError| matches!(err, ProfileError::Toml(_))
+    )]
+    fn rejects_invalid_profile(
+        #[case] body: &str,
+        #[case] is_expected: fn(&ProfileError) -> bool,
+    ) -> Result<()> {
         let username = parse_username("alice")?;
-        let body = r#"
-            username = "bob"
-            full_name = "Alice Smith"
-        "#;
         let err = expect_profile_error(username, body)?;
-        ensure!(matches!(err, ProfileError::UsernameMismatch));
-        Ok(())
-    }
-
-    #[test]
-    fn rejects_invalid_username_value() -> Result<()> {
-        let username = parse_username("alice")?;
-        let body = r#"
-            username = "bad name"
-            full_name = "Alice Smith"
-        "#;
-        let err = expect_profile_error(username, body)?;
-        ensure!(matches!(err, ProfileError::UsernameInvalid(_)));
-        Ok(())
-    }
-
-    #[test]
-    fn rejects_missing_username_field() -> Result<()> {
-        let username = parse_username("alice")?;
-        let body = r#"
-            full_name = "Alice Smith"
-        "#;
-        let err = expect_profile_error(username, body)?;
-        ensure!(matches!(err, ProfileError::MissingUsername));
-        Ok(())
-    }
-
-    #[test]
-    fn rejects_non_string_value() -> Result<()> {
-        let username = parse_username("alice")?;
-        let body = r#"
-            username = "alice"
-            age = 42
-        "#;
-        let err = expect_profile_error(username, body)?;
-        ensure!(matches!(err, ProfileError::NonStringValue { ref key } if key == "age"));
-        Ok(())
-    }
-
-    #[test]
-    fn rejects_invalid_toml() -> Result<()> {
-        let username = parse_username("alice")?;
-        let body = "username = \"alice\"\nfull_name =";
-        let err = expect_profile_error(username, body)?;
-        ensure!(matches!(err, ProfileError::Toml(_)));
+        ensure!(is_expected(&err), "unexpected error variant: {err:?}");
         Ok(())
     }
 
