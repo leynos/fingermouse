@@ -135,6 +135,7 @@ impl FingerQuery {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for finger query parsing.
     use super::*;
     use rstest::rstest;
 

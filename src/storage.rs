@@ -146,18 +146,20 @@ fn trim_slashes(input: impl AsRef<str>) -> String {
 
 #[cfg(test)]
 mod tests {
+    //! Behavioural tests for the object-store backed user repository.
     use super::*;
     use crate::identity::Username;
     use anyhow::{Result, anyhow};
+    use cap_std::fs::Dir;
     use object_store::local::LocalFileSystem;
     use rstest::rstest;
     use tempfile::TempDir;
 
-    fn write_file(path: &std::path::Path, contents: &str) -> Result<()> {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
+    fn write_file(root: &Dir, relative: &str, contents: &str) -> Result<()> {
+        if let Some((parent, _)) = relative.rsplit_once('/') {
+            root.create_dir_all(parent)?;
         }
-        std::fs::write(path, contents)?;
+        root.write(relative, contents)?;
         Ok(())
     }
 
@@ -224,15 +226,17 @@ mod tests {
     async fn load_user_behaviour(#[case] case: LoadCase) -> Result<()> {
         let tmp = TempDir::new()?;
         let root = tmp.path();
+        let root_dir = Dir::open_ambient_dir(root, cap_std::ambient_authority())?;
 
         if let Some(user) = &case.existing_user {
             // mirror production repository layout so we exercise the full IO path
             write_file(
-                &root.join(format!("profiles/{}.toml", user.username)),
+                &root_dir,
+                &format!("profiles/{}.toml", user.username),
                 user.profile,
             )?;
             if let Some(plan) = user.plan {
-                write_file(&root.join(format!("plans/{}.plan", user.username)), plan)?;
+                write_file(&root_dir, &format!("plans/{}.plan", user.username), plan)?;
             }
         }
 

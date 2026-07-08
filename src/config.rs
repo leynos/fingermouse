@@ -153,7 +153,10 @@ fn ensure_directory(path: &Path) -> Result<()> {
             path.display()
         ));
     }
-    std::fs::create_dir_all(path)
+    // Creating the store root from operator-supplied configuration is the one
+    // ambient filesystem operation the server performs; cap-std makes that
+    // ambient authority explicit.
+    cap_std::fs::Dir::create_ambient_dir_all(path, cap_std::ambient_authority())
         .with_context(|| format!("failed to create store root {}", path.display()))?;
     Ok(())
 }

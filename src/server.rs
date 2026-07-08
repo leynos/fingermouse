@@ -214,6 +214,7 @@ fn render_message(message: &str) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for finger server request handling.
     use super::*;
     use crate::identity::{HostName, Username};
     use crate::rate_limit::RateLimitSettings;

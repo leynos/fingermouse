@@ -150,108 +150,112 @@ fn sanitise_line(input: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for finger profile parsing and rendering.
     use super::*;
     use crate::identity::Username;
+    use anyhow::{Result, anyhow, ensure};
     use rstest::rstest;
 
     fn profile_bytes(body: &str) -> &[u8] {
         body.as_bytes()
     }
 
-    fn parse_username(input: &str) -> Username {
-        Username::parse(input)
-            .unwrap_or_else(|err| panic!("failed to parse username '{input}': {err}"))
+    fn parse_username(input: &str) -> Result<Username> {
+        Username::parse(input).map_err(|err| anyhow!("failed to parse username '{input}': {err}"))
     }
 
-    fn expect_profile_error(username: Username, body: &str) -> ProfileError {
+    fn expect_profile_error(username: Username, body: &str) -> Result<ProfileError> {
         match FingerProfile::parse(username, profile_bytes(body)) {
-            Ok(_) => panic!("expected profile parsing to fail"),
-            Err(err) => err,
+            Ok(_) => Err(anyhow!("expected profile parsing to fail")),
+            Err(err) => Ok(err),
         }
     }
 
     #[test]
-    fn parses_profile() {
-        let username = parse_username("alice");
+    fn parses_profile() -> Result<()> {
+        let username = parse_username("alice")?;
         let body = r#"
             username = "alice"
             full_name = "Alice Smith"
             email = "alice@example.com"
         "#;
-        let profile = FingerProfile::parse(username.clone(), profile_bytes(body))
-            .unwrap_or_else(|err| panic!("profile parse failed: {err}"));
+        let profile = FingerProfile::parse(username.clone(), profile_bytes(body))?;
         let response = profile.render(false, None);
-        let text = String::from_utf8(response.as_bytes())
-            .unwrap_or_else(|err| panic!("utf8 conversion failed: {err}"));
-        assert!(text.contains("User: alice"));
-        assert!(text.contains("Full name: Alice Smith"));
-        assert!(text.contains("Email: alice@example.com"));
+        let text = String::from_utf8(response.as_bytes())?;
+        ensure!(text.contains("User: alice"));
+        ensure!(text.contains("Full name: Alice Smith"));
+        ensure!(text.contains("Email: alice@example.com"));
+        Ok(())
     }
 
     #[test]
-    fn rejects_mismatched_username() {
-        let username = parse_username("alice");
+    fn rejects_mismatched_username() -> Result<()> {
+        let username = parse_username("alice")?;
         let body = r#"
             username = "bob"
             full_name = "Alice Smith"
         "#;
-        let err = expect_profile_error(username, body);
-        assert!(matches!(err, ProfileError::UsernameMismatch));
+        let err = expect_profile_error(username, body)?;
+        ensure!(matches!(err, ProfileError::UsernameMismatch));
+        Ok(())
     }
 
     #[test]
-    fn rejects_invalid_username_value() {
-        let username = parse_username("alice");
+    fn rejects_invalid_username_value() -> Result<()> {
+        let username = parse_username("alice")?;
         let body = r#"
             username = "bad name"
             full_name = "Alice Smith"
         "#;
-        let err = expect_profile_error(username, body);
-        assert!(matches!(err, ProfileError::UsernameInvalid(_)));
+        let err = expect_profile_error(username, body)?;
+        ensure!(matches!(err, ProfileError::UsernameInvalid(_)));
+        Ok(())
     }
 
     #[test]
-    fn rejects_missing_username_field() {
-        let username = parse_username("alice");
+    fn rejects_missing_username_field() -> Result<()> {
+        let username = parse_username("alice")?;
         let body = r#"
             full_name = "Alice Smith"
         "#;
-        let err = expect_profile_error(username, body);
-        assert!(matches!(err, ProfileError::MissingUsername));
+        let err = expect_profile_error(username, body)?;
+        ensure!(matches!(err, ProfileError::MissingUsername));
+        Ok(())
     }
 
     #[test]
-    fn rejects_non_string_value() {
-        let username = parse_username("alice");
+    fn rejects_non_string_value() -> Result<()> {
+        let username = parse_username("alice")?;
         let body = r#"
             username = "alice"
             age = 42
         "#;
-        let err = expect_profile_error(username, body);
-        assert!(matches!(err, ProfileError::NonStringValue { ref key } if key == "age"));
+        let err = expect_profile_error(username, body)?;
+        ensure!(matches!(err, ProfileError::NonStringValue { ref key } if key == "age"));
+        Ok(())
     }
 
     #[test]
-    fn rejects_invalid_toml() {
-        let username = parse_username("alice");
+    fn rejects_invalid_toml() -> Result<()> {
+        let username = parse_username("alice")?;
         let body = "username = \"alice\"\nfull_name =";
-        let err = expect_profile_error(username, body);
-        assert!(matches!(err, ProfileError::Toml(_)));
+        let err = expect_profile_error(username, body)?;
+        ensure!(matches!(err, ProfileError::Toml(_)));
+        Ok(())
     }
 
     #[rstest]
     #[case(Some(""), "(empty plan)")]
     #[case(None, "(no plan)")]
-    fn renders_plan_variants(#[case] plan: Option<&str>, #[case] expected: &str) {
-        let username = parse_username("alice");
+    fn renders_plan_variants(#[case] plan: Option<&str>, #[case] expected: &str) -> Result<()> {
+        let username = parse_username("alice")?;
         let body = r#"
             username = "alice"
         "#;
-        let profile = FingerProfile::parse(username, profile_bytes(body))
-            .unwrap_or_else(|err| panic!("profile parse failed: {err}"));
+        let profile = FingerProfile::parse(username, profile_bytes(body))?;
         let response = profile.render(true, plan);
-        let text = String::from_utf8(response.as_bytes())
-            .unwrap_or_else(|err| panic!("utf8 conversion failed: {err}"));
-        assert!(text.contains(expected));
+        let text = String::from_utf8(response.as_bytes())?;
+        ensure!(text.contains(expected));
+        Ok(())
     }
 }
