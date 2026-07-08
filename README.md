@@ -84,8 +84,22 @@ directories.
 Fast feedback is available through:
 
 - `cargo fmt` for formatting checks.
-- `cargo clippy --all-targets --all-features -- -D warnings` for linting.
+- `make lint` for linting, which runs Clippy
+  (`cargo clippy --all-targets --all-features -- -D warnings`) followed by the
+  [Whitaker](https://github.com/leynos/whitaker) Dylint suite with warnings
+  denied.
 - `cargo test` for unit tests built with `rstest` and `tokio`.
+
+Linting requires the Whitaker suite. Install it with
+[`whitaker-installer`](https://github.com/leynos/whitaker):
+
+```bash
+cargo binstall --no-confirm --locked whitaker-installer  # or: cargo install --locked whitaker-installer
+whitaker-installer
+```
+
+This provisions the pinned toolchain, `cargo-dylint`, and the `whitaker`
+wrapper used by `make lint`.
 
 The rate limiter depends on the `mockable` clock abstraction, enabling
 deterministic control of timestamps in the test suite.
