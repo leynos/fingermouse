@@ -36,6 +36,7 @@ pub fn trim_line_endings(line: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for finger response framing and line endings.
     use super::*;
     use rstest::rstest;
 

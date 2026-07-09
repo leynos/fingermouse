@@ -119,6 +119,7 @@ impl fmt::Display for HostName {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for username and hostname validation.
     use super::*;
     use rstest::rstest;
 

@@ -175,6 +175,7 @@ fn chrono_duration(window: Duration) -> ChronoDuration {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for the per-client rate limiter.
     use super::*;
     use std::sync::Mutex as StdMutex;
 

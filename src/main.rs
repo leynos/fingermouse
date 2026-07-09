@@ -20,10 +20,18 @@ use server::FingerServer;
 use storage::ObjectStoreUserStore;
 use tracing_subscriber::EnvFilter;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     install_tracing();
 
+    // Build the runtime explicitly so runtime construction errors propagate
+    // instead of panicking inside the `#[tokio::main]` expansion.
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(run())
+}
+
+async fn run() -> Result<()> {
     let cli = CliOptions::parse();
     let config = ServerConfig::from_cli(cli)?;
     let metrics_endpoint = telemetry::install_metrics(config.metrics_listen).await?;
