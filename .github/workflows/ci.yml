@@ -33,6 +33,8 @@ jobs:
             **/*.md
             !**/target/**
             !**/dist/**
+      - name: Spelling
+        run: make spelling
       - name: Cache whitaker-installer
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
