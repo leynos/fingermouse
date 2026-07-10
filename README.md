@@ -89,6 +89,10 @@ Fast feedback is available through:
   [Whitaker](https://github.com/leynos/whitaker) Dylint suite with warnings
   denied.
 - `cargo test` for unit tests built with `rstest` and `tokio`.
+- `make spelling` for en-GB-oxendict prose spelling. The generated
+  `typos.toml` starts from the shared estate dictionary, refreshes its
+  untracked local cache only when the authority is newer, and then applies the
+  narrow repository policy in `typos.local.toml`.
 
 Linting requires the Whitaker suite. Install it with
 [`whitaker-installer`](https://github.com/leynos/whitaker):
