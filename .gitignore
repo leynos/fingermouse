@@ -6,3 +6,4 @@ target/
 .uv-cache/
 .uv-tools/
 .coverage
+__pycache__/
