@@ -404,7 +404,7 @@ dependencies = [
  "dashmap",
  "futures",
  "indexmap",
- "metrics",
+ "metrics 0.24.6",
  "metrics-exporter-prometheus",
  "mockable",
  "object_store",
@@ -1035,6 +1035,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "metrics"
+version = "0.24.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89550ee9f79e88fef3119de263694973a8adb26c21d75322164fb8c493039fe2"
+dependencies = [
+ "portable-atomic",
+ "rapidhash",
+]
+
+[[package]]
 name = "metrics-exporter-prometheus"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1045,7 +1055,7 @@ dependencies = [
  "hyper-tls",
  "indexmap",
  "ipnet",
- "metrics",
+ "metrics 0.22.4",
  "metrics-util",
  "quanta",
  "thiserror 1.0.69",
@@ -1062,7 +1072,7 @@ dependencies = [
  "crossbeam-epoch",
  "crossbeam-utils",
  "hashbrown 0.14.5",
- "metrics",
+ "metrics 0.22.4",
  "num_cpus",
  "quanta",
  "sketches-ddsketch",
@@ -1487,6 +1497,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom 0.2.16",
+]
+
+[[package]]
+name = "rapidhash"
+version = "4.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5da7e78a036ce858e8d55b7e7dc8ba3a88b78350fd2155d3591bbd966b58589e"
+dependencies = [
+ "rustversion",
 ]
 
 [[package]]
