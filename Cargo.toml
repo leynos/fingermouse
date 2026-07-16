@@ -19,7 +19,7 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt"] }
 dashmap = "6.2.1"
 metrics = "0.24.6"
-metrics-exporter-prometheus = "0.13.1"
+metrics-exporter-prometheus = "0.18.3"
 cap-std = "4.0.2"
 
 [dev-dependencies]
