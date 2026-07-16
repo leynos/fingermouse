@@ -61,17 +61,14 @@ jobs:
           output-path: lcov.info
           format: lcov
           with-ratchet: 'true'
-      # The `mode: check` PR gate is deliberately not wired in yet:
-      # CodeScene project 72543 has no coverage-gates configuration, so
-      # `cs-coverage check` would fail every run with "HTTP call
-      # succeeded, but the received project-config isn't valid. Lacks
-      # the gates configuration." — a CodeScene-side per-project
-      # setting, not a CI defect (ddlint#287 and chutoro#156 hit the
-      # byte-identical error). The previous unguarded `mode: upload`
-      # step here is also removed: CodeScene rejects uploads from
-      # non-analysed branches, so once CS_ACCESS_TOKEN is set it would
-      # fail on every pull request. Coverage is now uploaded only from
-      # coverage-main.yml on push to main. Add the check step in a
-      # fast-follow PR once coverage-main.yml has uploaded to main at
-      # least once and the gate is confirmed to resolve, or once
-      # CodeScene confirms the project's coverage gate is enabled.
+      - name: Check coverage against CodeScene gates
+        env:
+          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
+        if: env.CS_ACCESS_TOKEN != '' && github.event_name == 'pull_request'
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@927edd45ae77be4251a8a18ca9eb5613a2e32cbd
+        with:
+          format: lcov
+          mode: check
+          project-url: https://api.codescene.io/v2/projects/72543
+          access-token: ${{ env.CS_ACCESS_TOKEN }}
+          installer-checksum: ${{ vars.CODESCENE_CLI_SHA256 }}
