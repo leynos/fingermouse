@@ -1,5 +1,8 @@
 # Fingermouse
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](
+https://deepwiki.com/leynos/fingermouse)
+
 Fingermouse is a Tokio-based finger server that answers classic finger queries
 over TCP. User details are sourced from a TOML document hosted in an
 `object_store` backend, and optional `.plan` files are delivered when the
