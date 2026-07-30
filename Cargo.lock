@@ -470,7 +470,7 @@ dependencies = [
  "tempfile",
  "third-wheel",
  "thiserror",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "toml",
  "tracing",
  "tracing-subscriber",
@@ -732,7 +732,7 @@ dependencies = [
  "http 1.4.2",
  "indexmap",
  "slab",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "tokio-util 0.7.18",
  "tracing",
 ]
@@ -862,7 +862,7 @@ dependencies = [
  "itoa",
  "pin-project-lite 0.2.16",
  "smallvec",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "want",
 ]
 
@@ -877,7 +877,7 @@ dependencies = [
  "hyper-util",
  "rustls",
  "rustls-native-certs",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "tokio-rustls",
  "tower-service",
 ]
@@ -897,7 +897,7 @@ dependencies = [
  "libc",
  "pin-project-lite 0.2.16",
  "socket2",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "tower-service",
  "tracing",
 ]
@@ -1255,7 +1255,7 @@ dependencies = [
  "quanta",
  "rustls",
  "thiserror",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "tracing",
 ]
 
@@ -1433,7 +1433,7 @@ dependencies = [
  "parking_lot",
  "percent-encoding",
  "snafu",
- "tokio 1.52.3",
+ "tokio 1.53.1",
  "tracing",
  "url",
  "walkdir",
@@ -2295,9 +2295,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.52.3"
+version = "1.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
+checksum = "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed"
 dependencies = [
  "bytes 1.10.1",
  "libc",
@@ -2348,7 +2348,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1729aa945f29d91ba541258c8df89027d5792d85a8841fb65e8bf0f4ede4ef61"
 dependencies = [
  "rustls",
- "tokio 1.52.3",
+ "tokio 1.53.1",
 ]
 
 [[package]]
@@ -2375,7 +2375,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "pin-project-lite 0.2.16",
- "tokio 1.52.3",
+ "tokio 1.53.1",
 ]
 
 [[package]]
