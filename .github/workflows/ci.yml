@@ -15,7 +15,7 @@ jobs:
       BUILD_PROFILE: debug
       WHITAKER_INSTALLER_VERSION: '0.2.6'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
       - name: Install system dependencies
@@ -23,11 +23,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@18bed1ca49a6de3d8882bd72635a32ae3f023d57
+        uses: leynos/shared-actions/.github/actions/setup-rust@19a7f5d1b8d5c1b2236c39720a5744492b3fc129
       - name: Format
         run: make check-fmt
       - name: Markdown lint
-        uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25
+        uses: DavidAnson/markdownlint-cli2-action@6bf21b07787794f89a243495939cd651942aeabe
         with:
           globs: |
             **/*.md
@@ -56,7 +56,7 @@ jobs:
       - name: Lint
         run: make lint
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@18bed1ca49a6de3d8882bd72635a32ae3f023d57
+        uses: leynos/shared-actions/.github/actions/generate-coverage@19a7f5d1b8d5c1b2236c39720a5744492b3fc129
         with:
           output-path: lcov.info
           format: lcov
@@ -65,7 +65,7 @@ jobs:
         env:
           CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
         if: env.CS_ACCESS_TOKEN != '' && github.event_name == 'pull_request'
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@18bed1ca49a6de3d8882bd72635a32ae3f023d57
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@19a7f5d1b8d5c1b2236c39720a5744492b3fc129
         with:
           format: lcov
           mode: check
