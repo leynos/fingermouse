@@ -10,7 +10,7 @@ clap = { version = "4.5.6", features = ["derive", "env"] }
 futures = "0.3.30"
 indexmap = { version = "2.3.0", features = ["serde"] }
 mockable = { version = "3.0.0", default-features = false, features = ["clock", "mock"] }
-object_store = { version = "0.9.1", default-features = false }
+object_store = { version = "0.14.1", default-features = false }
 serde = { version = "1.0.210", features = ["derive"] }
 thiserror = "2.0.18"
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros", "net", "signal", "time", "io-util"] }
