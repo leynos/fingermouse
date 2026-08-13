@@ -7,3 +7,9 @@ target/
 .uv-tools/
 .coverage
 __pycache__/
+.vtcode/
+.claude/
+.memdb/
+.grepai/
+*.swo
+*~
