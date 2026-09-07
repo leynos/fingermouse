@@ -141,7 +141,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4
       - name: Build on FreeBSD
-        uses: vmactions/freebsd-vm@77ed28d336d03fe19a3f4f7266c1d2c4714dd79d  # v1.5.2
+        uses: vmactions/freebsd-vm@f0552d3b69211736abd97f02ff3d4674c56b73b1  # v1.5.5
         with:
           release: '13.2'
           arch: ${{ matrix.arch }}
@@ -177,7 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4
       - name: Build on OpenBSD
-        uses: vmactions/openbsd-vm@c941015845c0f0c429676840963dc63b226d4f69  # v1.4.5
+        uses: vmactions/openbsd-vm@86cdc08415d9d0865267e686561e276c52d62530  # v1.4.7
         with:
           release: '7.4'
           arch: ${{ matrix.arch }}
@@ -211,7 +211,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4
-      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
         with:
           generate_release_notes: true
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
