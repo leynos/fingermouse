@@ -122,9 +122,13 @@ project:
 
     ```sh
     cargo fmt --workspace -- --check
+    mdtablefix --check --git --include-untracked --wrap --renumber --breaks \
+      --ellipsis --fences
     ```
 
-    validating formatting across the entire workspace without modifying files.
+    validating Rust formatting across the entire workspace and Markdown
+    formatting across every tracked and non-ignored untracked Markdown file
+    without modifying files.
   - `make lint` executes:
 
     ```sh
