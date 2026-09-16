@@ -127,7 +127,8 @@ project:
     ```
 
     validating Rust formatting across the entire workspace and Markdown
-    formatting across every tracked document without modifying files.
+    formatting across every tracked and non-ignored untracked Markdown file
+    without modifying files.
   - `make lint` executes:
 
     ```sh
