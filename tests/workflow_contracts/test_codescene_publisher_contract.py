@@ -125,7 +125,7 @@ def test_unrelated_job_group_does_not_govern(documents: Documents) -> None:
 def test_publisher_group_is_exactly_workflow_and_ref(
     documents: Documents, group: str
 ) -> None:
-    """Only one group per ref keeps uploads in commit order."""
+    """Only one group per ref keeps triggered uploads in commit order."""
     publisher, _ = find_publisher(documents)
     publisher["concurrency"] = {"group": group, "cancel-in-progress": False}
     assert_reports(publisher_violations, documents, "group must be exactly")

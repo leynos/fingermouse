@@ -52,8 +52,10 @@ PUBLISHER_EVENTS: typ.Final[frozenset[str]] = frozenset({"push", "workflow_dispa
 #: The publisher's concurrency group, exactly. Keyed on the ref alone: with
 #: one group per ref, runs never overlap, and the survivor of any replacement
 #: is the newest trigger, whose commit is the newest main when it fired, so
-#: uploads land in commit order. Adding the event would let an earlier dispatch
-#: finish after a newer push and upload older coverage last.
+#: triggered runs (push and dispatch) upload in commit order. Adding the event
+#: would let an earlier dispatch finish after a newer push and upload older
+#: coverage last. A manual re-run of an older run keeps its commit; that is an
+#: operator action, republishing that commit until the next push supersedes it.
 PUBLISHER_GROUP: typ.Final[str] = "${{ github.workflow }}-${{ github.ref }}"
 
 RETIRED: typ.Final[tuple[str, ...]] = (

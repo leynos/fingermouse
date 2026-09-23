@@ -23,10 +23,13 @@ on:
   workflow_dispatch:
 
 # Never cancelled, and keyed on the ref alone. A cancelled run abandons its
-# upload and its baseline write. With one group per ref, runs never overlap and
-# a newer trigger replaces any run still pending, so uploads land in commit
-# order and the newest baseline wins. A dispatch that replaces a pending push
-# uploads the same or a newer commit, but leaves the baseline one push behind.
+# upload and its baseline write. With one group per ref, triggered runs (push
+# and dispatch) never overlap and a newer trigger replaces any run still
+# pending, so their uploads land in commit order and the newest baseline wins.
+# A manual "Re-run jobs" on an older run is an operator action: it republishes
+# that commit's coverage and baseline until the next push supersedes it. A
+# dispatch that replaces a pending push uploads the same or a newer commit,
+# but leaves the baseline one push behind.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false

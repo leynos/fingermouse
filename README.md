@@ -130,7 +130,9 @@ a composite action that would pass a step's environment on to its nested steps.
 A check step writes whether the secret is set, the upload runs only when it is
 and only for `refs/heads/main`, and the token reaches the uploader solely as its
 `access-token` input. Runs share one concurrency group per ref and are never
-cancelled, so uploads land in commit order.
+cancelled, so triggered runs (a push or a dispatch) upload in commit order. A
+manual re-run of an older run is an operator action: it republishes that
+commit's coverage and baseline until the next push supersedes it.
 
 Two gaps are known and accepted. Merges made by the Dependabot automerge
 workflow with `GITHUB_TOKEN` fire no push, so they reach the publisher only
