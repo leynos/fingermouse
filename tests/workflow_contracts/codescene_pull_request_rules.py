@@ -57,6 +57,20 @@ PULL_REQUEST_FORBIDDEN: typ.Final[tuple[tuple[str, str], ...]] = (
 )
 
 
+def _refuse_unfollowable(reference: str) -> None:
+    """Refuse a call that would run a workflow other than the checked-out file.
+
+    A qualified call to this repository runs the file at the named ref, and a
+    `$/` call may not name one at all, so neither can be followed here.
+    """
+    if reference.casefold().startswith(f"{REPOSITORY}/".casefold()):
+        message = f"{reference} runs this repository's workflow at a ref"
+        raise WorkflowError(message)
+    if reference.startswith("$/") and "@" in reference:
+        message = f"{reference}: a `$/` call cannot name a ref"
+        raise WorkflowError(message)
+
+
 def local_callee(reference: str, documents: dict[str, Document]) -> str | None:
     """Return the workflow file a job-level `uses:` names in this tree.
 
@@ -85,12 +99,7 @@ def local_callee(reference: str, documents: dict[str, Document]) -> str | None:
         a local workflow that does not exist.
 
     """
-    if reference.casefold().startswith(f"{REPOSITORY}/".casefold()):
-        message = f"{reference} runs this repository's workflow at a ref"
-        raise WorkflowError(message)
-    if reference.startswith("$/") and "@" in reference:
-        message = f"{reference}: a `$/` call cannot name a ref"
-        raise WorkflowError(message)
+    _refuse_unfollowable(reference)
     path = reference.removeprefix("./").removeprefix("$/")
     if not path.startswith(WORKFLOW_PREFIX):
         return None
@@ -112,20 +121,30 @@ def _callees(name: str, documents: dict[str, Document]) -> set[str]:
     }
 
 
-def _chained(found: set[str], documents: dict[str, Document]) -> set[str]:
-    """Return workflows a `workflow_run` trigger chains onto any found one."""
-    # GitHub matches `workflows:` on a workflow's `name:`, or on its path from
-    # the repository root when it declares none.
-    watched_names = {
+def _names(found: set[str], documents: dict[str, Document]) -> set[str]:
+    """Return the names a `workflow_run` trigger would match the found ones by.
+
+    GitHub matches `workflows:` on a workflow's `name:`, or on its path from
+    the repository root when it declares none.
+    """
+    return {
         str(documents[name].get("name", f"{WORKFLOW_PREFIX}{name}")) for name in found
     }
-    chained: set[str] = set()
-    for name, document in documents.items():
-        run = triggers(name, document).get("workflow_run")
-        watched = run.get("workflows", []) if isinstance(run, dict) else []
-        if watched_names.intersection(map(str, typ.cast("list[object]", watched))):
-            chained.add(name)
-    return chained
+
+
+def _watched(name: str, document: Document) -> set[str]:
+    """Return the workflow names one workflow's `workflow_run` trigger watches."""
+    run = triggers(name, document).get("workflow_run")
+    watched = run.get("workflows", []) if isinstance(run, dict) else []
+    return set(map(str, typ.cast("list[object]", watched)))
+
+
+def _chained(found: set[str], documents: dict[str, Document]) -> set[str]:
+    """Return workflows a `workflow_run` trigger chains onto any found one."""
+    names = _names(found, documents)
+    return {
+        name for name, document in documents.items() if _watched(name, document) & names
+    }
 
 
 def closure(seeds: set[str], documents: dict[str, Document]) -> dict[str, Document]:
@@ -250,17 +269,27 @@ def pull_request_contacts(documents: dict[str, Document]) -> list[str]:
         One message per violation; empty when the repository complies.
 
     """
-    found: list[str] = []
-    for name, document in pull_request_closure(documents).items():
-        texts = {folded(text) for text in scalars(document)}
-        found += [
-            f"{name} {reason}"
-            for marker, reason in PULL_REQUEST_FORBIDDEN
-            if any(marker in text for text in texts)
-        ]
-        found += [
-            f"{name} job {job_name} forwards every secret with `secrets: inherit`"
-            for job_name, job in jobs(name, document).items()
-            if job.get("secrets") == "inherit"
-        ]
-    return found
+    return [
+        problem
+        for name, document in pull_request_closure(documents).items()
+        for problem in (*_contacts(name, document), *_inherited(name, document))
+    ]
+
+
+def _contacts(name: str, document: Document) -> list[str]:
+    """Report each forbidden marker in any scalar of one workflow."""
+    texts = {folded(text) for text in scalars(document)}
+    return [
+        f"{name} {reason}"
+        for marker, reason in PULL_REQUEST_FORBIDDEN
+        if any(marker in text for text in texts)
+    ]
+
+
+def _inherited(name: str, document: Document) -> list[str]:
+    """Report each job in one workflow forwarding every secret."""
+    return [
+        f"{name} job {job_name} forwards every secret with `secrets: inherit`"
+        for job_name, job in jobs(name, document).items()
+        if job.get("secrets") == "inherit"
+    ]
