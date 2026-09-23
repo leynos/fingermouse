@@ -3,7 +3,7 @@
 No `env` binds the token. A check step runs one exact command that Actions
 expands to `available=true` or `available=false`, and the token reaches the
 uploader only as its `access-token` input: the uploader is a composite action,
-so a token in its step's `env` would reach the nested upload-artifact and
+so a token in its step's `env` would reach the nested `upload-artifact` and
 cache steps too. Every test mutates a copy of this
 repository's workflows and asserts that the clause meant to catch the edit
 does.

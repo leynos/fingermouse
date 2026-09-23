@@ -21,6 +21,7 @@ from codescene_contract_support import (
     find_publisher,
     first_job,
     job_steps,
+    replace_triggers,
 )
 from codescene_coverage_rules import contract_invocations, coverage_violations
 from codescene_publisher_rules import publisher_violations, retired_names
@@ -204,7 +205,7 @@ def test_publisher_answers_only_a_push_to_main(
 ) -> None:
     """Only main's pushes may write the baseline CodeScene is given."""
     publisher, _ = find_publisher(documents)
-    publisher[True] = on
+    replace_triggers(publisher, on)
     assert_reports(publisher_violations, documents, expected)
 
 
@@ -273,7 +274,8 @@ def test_repository_selection_is_pinned(documents: Documents) -> None:
 
 def test_pull_request_lane_cannot_answer_a_push(documents: Documents) -> None:
     """On main's push the lane's coverage would write a second baseline."""
-    documents[LANE][True] = {"pull_request": None, "push": {"branches": ["main"]}}
+    lane_triggers = {"pull_request": None, "push": {"branches": ["main"]}}
+    replace_triggers(documents[LANE], lane_triggers)
     assert_reports(coverage_violations, documents, "can run on a push outside")
 
 

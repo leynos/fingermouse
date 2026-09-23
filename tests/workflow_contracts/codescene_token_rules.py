@@ -1,7 +1,7 @@
 """Hold where the publisher may name CS_ACCESS_TOKEN (CV-005).
 
 The uploader is a composite action. A token bound in its step's `env` would
-reach its nested upload-artifact and cache steps too, and the action binds the
+reach its nested `upload-artifact` and cache steps too, and the action binds the
 token itself from `inputs.access-token`. So no `env` anywhere in the publisher
 carries the token. A check step reports whether the secret is set with one
 exact command whose expression Actions evaluates before the shell runs, and the
@@ -33,7 +33,7 @@ CHECK_ID: typ.Final[str] = "codescene-token"
 
 #: The check step's whole command. Actions evaluates the expression to `true`
 #: or `false` before the shell runs, so there is no shell conditional to
-#: neutralise and the token is bound in no step's `env`. A fork without the
+#: neutralize and the token is bound in no step's `env`. A fork without the
 #: secret writes `available=false` and skips the upload rather than failing.
 CHECK_COMMAND: typ.Final[str] = (
     'echo "available=${{ secrets.CS_ACCESS_TOKEN != \'\' }}" >> "$GITHUB_OUTPUT"'

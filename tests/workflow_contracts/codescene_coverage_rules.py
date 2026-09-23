@@ -159,7 +159,7 @@ def _artefact_uploads(documents: dict[str, Document], report: object) -> list[st
     """Report a pull-request step that uploads the coverage report as an artefact.
 
     `publish-artefact: 'false'` keeps the shared action from uploading it; a
-    separate upload-artifact step would publish it anyway.
+    separate `upload-artifact` step would publish it anyway.
     """
     return [
         f"{name} must not upload the coverage report as an artefact"

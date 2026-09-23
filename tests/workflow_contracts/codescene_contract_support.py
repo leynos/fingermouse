@@ -87,6 +87,17 @@ def coverage_step(document: Document) -> Step:
     )
 
 
+def replace_triggers(document: Document, triggers: object) -> None:
+    """Replace a workflow's triggers under whichever `on` spelling it used.
+
+    A workflow may spell the key `on` or `'on'`; setting one beside the other
+    would make the reader refuse the document for declaring both.
+    """
+    for spelling in ("on", True):
+        document.pop(spelling, None)
+    document[True] = triggers
+
+
 def lane_jobs(documents: Documents) -> dict[str, object]:
     """Return the pull-request lane's jobs, to add a calling job."""
     return typ.cast("dict[str, object]", documents[LANE]["jobs"])
