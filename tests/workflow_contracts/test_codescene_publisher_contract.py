@@ -281,6 +281,13 @@ def test_pull_request_coverage_job_runs_unconditionally(documents: Documents) ->
     assert_reports(coverage_violations, documents, "must run unconditionally")
 
 
+def test_pull_request_coverage_pin_matches_the_publisher(documents: Documents) -> None:
+    """A lane at another pin measures with different code from the baseline's."""
+    step = coverage_step(documents[LANE])
+    step["uses"] = str(step["uses"]).partition("@")[0] + "@" + "0" * 40
+    assert_reports(coverage_violations, documents, "pin differs from the publisher's")
+
+
 def test_repository_selection_is_pinned(documents: Documents) -> None:
     """Both lanes changing their selection together would pass parity alone."""
     publisher, _ = find_publisher(documents)

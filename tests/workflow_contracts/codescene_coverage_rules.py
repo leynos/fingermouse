@@ -62,30 +62,36 @@ def _selection(step: Step) -> dict[str, object]:
 def _pull_request_lane(
     name: str, document: Document, step: Step, trunk: Step
 ) -> list[str]:
-    """Report a pull-request coverage step that cannot ratchet like main."""
-    inputs = step.get("with")
-    inputs = inputs if isinstance(inputs, dict) else {}
-    found = [
-        f"{name} coverage must not continue on error"
-        for scope in (step, holding_job(name, document, step))
-        if continues_on_error(scope)
+    """Report a pull-request coverage step that cannot ratchet like main.
+
+    Any condition, on the step or its job, can only switch the ratchet off. A
+    lane that also answers a push is refused separately, as a second baseline
+    writer.
+    """
+    job = holding_job(name, document, step)
+    scopes = (step, job)
+    return [
+        f"{name} coverage {problem}"
+        for problem, failed in (
+            ("must not continue on error", any(map(continues_on_error, scopes))),
+            ("must run unconditionally", any("if" in scope for scope in scopes)),
+            ("must set with-ratchet 'true'", _with(step, "with-ratchet") != "true"),
+            (
+                "must set publish-artefact 'false'",
+                _with(step, "publish-artefact") != "false",
+            ),
+            (
+                "selection differs from the publisher's",
+                _selection(step) != _selection(trunk),
+            ),
+            ("pin differs from the publisher's", step.get("uses") != trunk.get("uses")),
+            (
+                f"job permissions must be exactly {READ_ONLY}",
+                job.get("permissions") != READ_ONLY,
+            ),
+        )
+        if failed
     ]
-    # Any condition, on the step or its job, can only switch the ratchet off.
-    # A lane that also answers a push is refused separately, as a second
-    # baseline writer.
-    if any("if" in scope for scope in (step, holding_job(name, document, step))):
-        found.append(f"{name} coverage must run unconditionally")
-    if inputs.get("with-ratchet") != "true":
-        found.append(f"{name} coverage must set with-ratchet 'true'")
-    if inputs.get("publish-artefact") != "false":
-        found.append(f"{name} coverage must set publish-artefact 'false'")
-    if _selection(step) != _selection(trunk):
-        found.append(f"{name} coverage selection differs from the publisher's")
-    if step.get("uses") != trunk.get("uses"):
-        found.append(f"{name} coverage pin differs from the publisher's")
-    if holding_job(name, document, step).get("permissions") != READ_ONLY:
-        found.append(f"{name} coverage job permissions must be exactly {READ_ONLY}")
-    return found
 
 
 def _trunk_violations(publisher: str, trunk: Step, upload: Step) -> list[str]:
