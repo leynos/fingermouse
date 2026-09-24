@@ -117,31 +117,31 @@ def test_closure_refuses_calls_it_cannot_read(
         pull_request_closure(documents)
 
 
-def test_closure_starts_from_pull_request_target(documents: Documents) -> None:
-    """A pull_request_target workflow runs with secrets on every PR event."""
-    documents[PROBE] = load_workflow(
-        PROBE,
-        "on: pull_request_target\njobs:\n  a:\n    steps:\n"
-        "      - run: curl https://codescene.io\n",
-    )
-    _assert_contact(documents, f"{PROBE} names the CodeScene host")
-
-
 @pytest.mark.parametrize(
     "event",
     [
+        "check_run",
+        "check_suite",
         "issue_comment",
         "merge_group",
         "pull_request_review",
         "pull_request_review_comment",
+        "pull_request_target",
         "push",
+        "status",
         "{push: {branches: ['**']}}",
+        "an_event_github_adds_later",
     ],
 )
 def test_closure_starts_from_every_pull_request_event(
     documents: Documents, event: str
 ) -> None:
-    """A queued merge or a review runs with secrets for a same-repository PR."""
+    """Any event a pull request can start runs with the repository's secrets.
+
+    Beyond the pull-request events themselves, a queued merge, a review, a
+    comment and a check or status posted on the head commit all start a
+    workflow for a same-repository pull request.
+    """
     documents[PROBE] = load_workflow(
         PROBE,
         f"on: {event}\njobs:\n  a:\n    steps:\n"
@@ -155,10 +155,14 @@ def test_closure_starts_from_every_pull_request_event(
     [
         "{push: {branches: [main]}}",
         "{push: {tags: ['v*']}}",
+        "{release: {types: [published]}}",
         "{schedule: [{cron: '0 0 * * *'}]}",
+        "workflow_call",
+        "workflow_dispatch",
+        "{workflow_run: {workflows: [Unrelated]}}",
     ],
 )
-def test_trunk_tag_and_schedule_triggers_stay_off_the_surface(
+def test_events_no_pull_request_starts_stay_off_the_surface(
     documents: Documents, trigger: str
 ) -> None:
     """The seed rule is narrow: these runs never start for a pull request."""

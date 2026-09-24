@@ -43,9 +43,6 @@ UPLOAD_GUARD: typ.Final[frozenset[str]] = frozenset(
 READ_ONLY: typ.Final[dict[str, str]] = {"contents": "read"}
 CHECKOUT_ACTION: typ.Final[str] = "actions/checkout"
 
-#: Retired with CV-005 everywhere, not only on pull-request lanes: the
-#: uploader rejects `installer-checksum` outright, and the variable and its
-#: refresher workflow pinned an installer script the uploader no longer runs.
 #: The publisher answers these events and no others.
 PUBLISHER_EVENTS: typ.Final[frozenset[str]] = frozenset({"push", "workflow_dispatch"})
 
@@ -58,6 +55,9 @@ PUBLISHER_EVENTS: typ.Final[frozenset[str]] = frozenset({"push", "workflow_dispa
 #: operator action, republishing that commit until the next push supersedes it.
 PUBLISHER_GROUP: typ.Final[str] = "${{ github.workflow }}-${{ github.ref }}"
 
+#: Retired with CV-005 everywhere, not only on pull-request lanes: the
+#: uploader rejects `installer-checksum` outright, and the variable and its
+#: refresher workflow pinned an installer script the uploader no longer runs.
 RETIRED: typ.Final[tuple[str, ...]] = (
     "installer-checksum",
     "codescene_cli_sha256",
@@ -137,7 +137,9 @@ def _publisher_concurrency(name: str, document: Document, upload: Step) -> list[
     job. One on an unrelated job leaves concurrent uploads possible. Every
     group, at either level, must be exactly `PUBLISHER_GROUP`, and none may
     cancel a run in progress: a cancelled run abandons its upload and its
-    baseline write.
+    baseline write. The group is declared at one scope only, because GitHub
+    treats the same group on the workflow and on one of its jobs as a
+    deadlock and cancels the job.
     """
     governing = [
         value
@@ -154,6 +156,8 @@ def _publisher_concurrency(name: str, document: Document, upload: Step) -> list[
     )
     scopes = [document.get("concurrency")]
     scopes += [job.get("concurrency") for job in jobs(name, document).values()]
+    if sum(map(_declares_group, scopes)) > 1:
+        found.append(f"{name} declares a concurrency group at more than one scope")
     found += [
         f"{name} concurrency group must be exactly {PUBLISHER_GROUP}"
         for scope in scopes

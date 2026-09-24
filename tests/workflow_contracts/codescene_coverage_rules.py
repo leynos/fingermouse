@@ -70,9 +70,10 @@ def _pull_request_lane(
         for scope in (step, holding_job(name, document, step))
         if continues_on_error(scope)
     ]
-    # Any condition can only switch the ratchet off. A lane that also answers
-    # a push is refused separately, as a second baseline writer.
-    if "if" in step:
+    # Any condition, on the step or its job, can only switch the ratchet off.
+    # A lane that also answers a push is refused separately, as a second
+    # baseline writer.
+    if any("if" in scope for scope in (step, holding_job(name, document, step))):
         found.append(f"{name} coverage must run unconditionally")
     if inputs.get("with-ratchet") != "true":
         found.append(f"{name} coverage must set with-ratchet 'true'")
@@ -227,8 +228,10 @@ def contract_invocations(documents: dict[str, Document]) -> list[str]:
     """Report a pull-request lane that no longer runs this contract.
 
     A contract CI never runs protects nothing. The step must hold the command
-    alone and carry no condition, since `false && make workflow-contracts`
-    and `if: false` both keep the text while running nothing.
+    alone, and neither it nor its job may carry a condition or continue on
+    error, since `false && make workflow-contracts` and `if: false` both keep
+    the text while running nothing. Nor may any scope choose the shell:
+    `shell: 'true {0}'` keeps the command and runs only `true`.
 
     Parameters
     ----------
@@ -246,9 +249,27 @@ def contract_invocations(documents: dict[str, Document]) -> list[str]:
         for name, document in pull_request_closure(documents).items()
         for step in steps(name, document)
         if " ".join(str(step.get("run", "")).split()) == CONTRACT_COMMAND
-        and "if" not in step
-        and not continues_on_error(step)
+        and _runs_as_written(document, holding_job(name, document, step), step)
     ]
     if runs:
         return []
     return [f"no pull-request step runs `{CONTRACT_COMMAND}` unconditionally"]
+
+
+def _runs_as_written(document: Document, job: dict[str, object], step: Step) -> bool:
+    """Return whether a step runs its command unconditionally in the default shell.
+
+    A condition or `continue-on-error` on the step or its job skips the
+    command or turns its failure green, and a `shell` on the step or a
+    `defaults.run.shell` on the job or workflow replaces the interpreter.
+    """
+    skippable = any("if" in scope or continues_on_error(scope) for scope in (job, step))
+    reshelled = "shell" in step or any(map(_default_shell, (job, document)))
+    return not (skippable or reshelled)
+
+
+def _default_shell(scope: dict[str, object] | Document) -> bool:
+    """Return whether a job or workflow sets `defaults.run.shell`."""
+    defaults = scope.get("defaults")
+    run = defaults.get("run") if isinstance(defaults, dict) else None
+    return isinstance(run, dict) and "shell" in run

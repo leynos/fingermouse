@@ -27,18 +27,20 @@ from codescene_workflow_reader import (
 #: This repository, for refusing a qualified call to one of its own workflows.
 REPOSITORY: typ.Final[str] = "leynos/fingermouse"
 WORKFLOW_PREFIX: typ.Final[str] = ".github/workflows/"
-#: Events that start a workflow for a pull request: its head, its queued
-#: merge, a review of it, or a comment on it. The review and comment events and
-#: `merge_group` run with the repository's secrets for a same-repository pull
-#: request.
-PULL_REQUEST_EVENTS: typ.Final[frozenset[str]] = frozenset(
+#: Events no pull request can start. Every other event seeds the closure:
+#: besides the pull-request, review, comment and `merge_group` events,
+#: `check_run`, `check_suite` and `status` fire for a pull request's head
+#: commit with the repository's secrets, and an event GitHub adds later is
+#: treated as reachable until it is listed here. `push` is judged by its
+#: filter instead, and `workflow_call` and `workflow_run` are followed from
+#: their seeds rather than seeded.
+NON_PULL_REQUEST_EVENTS: typ.Final[frozenset[str]] = frozenset(
     {
-        "issue_comment",
-        "merge_group",
-        "pull_request",
-        "pull_request_review",
-        "pull_request_review_comment",
-        "pull_request_target",
+        "release",
+        "schedule",
+        "workflow_call",
+        "workflow_dispatch",
+        "workflow_run",
     }
 )
 
@@ -207,11 +209,12 @@ def serves_pull_requests(name: str, document: Document) -> bool:
     Returns
     -------
     bool
-        True for a pull-request event, or a push not confined to main or tags.
+        True for any event outside `NON_PULL_REQUEST_EVENTS`, or a push not
+        confined to main or tags.
 
     """
     events = triggers(name, document)
-    if PULL_REQUEST_EVENTS & events.keys():
+    if events.keys() - NON_PULL_REQUEST_EVENTS - {"push"}:
         return True
     return "push" in events and not _push_is_trunk_or_tags(events["push"])
 
