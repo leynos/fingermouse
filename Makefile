@@ -1,5 +1,5 @@
 .PHONY: help all clean test build release lint fmt check-fmt typecheck \
-	markdownlint nixie spelling spelling-helper-test
+	markdownlint nixie spelling spelling-helper-test workflow-contracts
 
 APP ?= fingermouse
 CARGO ?= cargo
@@ -13,6 +13,7 @@ UV_ENV = UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools
 RUFF_VERSION ?= 0.15.12
 TYPOS_VERSION ?= 1.48.0
 TYPOS = $(UV) tool run typos@$(TYPOS_VERSION)
+WORKFLOW_CONTRACTS = tests/workflow_contracts
 
 build: target/debug/$(APP) ## Build debug binary
 release: target/release/$(APP) ## Build release binary
@@ -65,6 +66,16 @@ spelling-helper-test: ## Validate the shared spelling-policy integration
 		-c /dev/null --rootdir=. -p no:cacheprovider \
 		--cov=generate_typos_config --cov=typos_rollout \
 		--cov=typos_rollout_cache --cov-fail-under=90
+
+workflow-contracts: ## Check the CV-005 CodeScene workflow contract
+	$(UV_ENV) $(UV) tool run ruff@$(RUFF_VERSION) format --isolated \
+		--target-version py313 --check $(WORKFLOW_CONTRACTS)
+	$(UV_ENV) $(UV) tool run ruff@$(RUFF_VERSION) check --isolated \
+		--target-version py313 $(WORKFLOW_CONTRACTS)
+	PYTHONDONTWRITEBYTECODE=1 $(UV_ENV) $(UV) run --no-project --python 3.13 \
+		--with pytest==9.0.2 --with pyyaml==6.0.3 \
+		python -m pytest $(WORKFLOW_CONTRACTS) \
+		-c /dev/null --rootdir=. -p no:cacheprovider
 
 nixie: ## Validate Mermaid diagrams
 	$(NIXIE) --no-sandbox

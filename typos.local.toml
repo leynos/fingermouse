@@ -12,7 +12,11 @@ accepted = ["Center"]
 [words.corrections]
 
 [patterns]
-ignore = []
+ignore = [
+  # The documentation style guide's own example of keeping US spelling when
+  # it names an API. The shared dictionary no longer masks code spans.
+  '`color`',
+]
 
 [files]
 exclude = []

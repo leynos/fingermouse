@@ -96,6 +96,8 @@ Fast feedback is available through:
   `typos.toml` starts from the shared estate dictionary, refreshes its
   untracked local cache only when the authority is newer, and then applies the
   narrow repository policy in `typos.local.toml`.
+- `make workflow-contracts` for the coverage workflow contract described
+  below.
 
 Linting requires the Whitaker suite. Install it with
 [`whitaker-installer`](https://github.com/leynos/whitaker):
@@ -110,3 +112,12 @@ wrapper used by `make lint`.
 
 The rate limiter depends on the `mockable` clock abstraction, enabling
 deterministic control of timestamps in the test suite.
+
+## Coverage ownership
+
+The trunk owns coverage publication. A push to `main` measures coverage, writes
+the ratchet baseline, and uploads the report to CodeScene; pull-request CI
+measures coverage only to compare it with that baseline and never calls
+CodeScene. `make workflow-contracts` holds this shape. See
+[coverage ownership](docs/coverage-ownership.md) for the mechanics and the
+known gaps.
