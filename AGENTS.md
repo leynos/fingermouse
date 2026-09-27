@@ -122,9 +122,18 @@ project:
 
     ```sh
     cargo fmt --workspace -- --check
+    mdtablefix --check --git --include-untracked \
+      --wrap --renumber --breaks --ellipsis --fences
     ```
 
-    validating formatting across the entire workspace without modifying files.
+    validating Rust formatting across the entire workspace and Markdown
+    formatting across the files Git tracks, plus untracked files Git does not
+    ignore, without modifying files. The Markdown check needs mdtablefix 0.6.0
+    or later on `PATH`; install it with
+    `cargo binstall --no-confirm mdtablefix@0.6.0` (or
+    `cargo install --locked mdtablefix@0.6.0`), the version CI pins. `make fmt`
+    rewrites the same files with `mdtablefix --in-place` and then runs
+    `markdownlint-cli2 --fix`.
   - `make lint` executes:
 
     ```sh
