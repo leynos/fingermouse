@@ -15,6 +15,11 @@ import typing as typ
 
 from codescene_workflow_reader import Document, calls, jobs
 
+if typ.TYPE_CHECKING:
+    import collections.abc as cabc
+
+type Steps = list[dict[str, object]]
+
 INSTALL_ACTION: typ.Final[str] = (
     "leynos/shared-actions/.github/actions/install-mdtablefix"
 )
@@ -24,6 +29,21 @@ SELECT_FLAGS: typ.Final[frozenset[str]] = frozenset(
 )
 _ASSIGNMENT = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*(?::=|\?=|=)\s*(.*)$")
 _REFERENCE = re.compile(r"\$\(([A-Za-z_][A-Za-z0-9_]*)\)")
+_CONDITIONAL_OPEN = re.compile(r"^(ifeq|ifneq|ifdef|ifndef)\b")
+_RUNS_CHECK_FMT = re.compile(r"(^|\s)make\s+(\S+\s+)*check-fmt(\s|$)")
+_MASKS_STATUS = re.compile(r"\|\||;|\|")
+
+
+def _unconditional_assignments(makefile: str) -> cabc.Iterator[tuple[str, str]]:
+    """Yield each `NAME = value` assignment outside a conditional block."""
+    depth = 0
+    for line in makefile.splitlines():
+        if _CONDITIONAL_OPEN.match(line):
+            depth += 1
+        elif line.startswith("endif"):
+            depth -= 1
+        elif depth == 0 and (match := _ASSIGNMENT.match(line)):
+            yield match.group(1), match.group(2).strip()
 
 
 def variables(makefile: str) -> dict[str, str]:
@@ -34,14 +54,8 @@ def variables(makefile: str) -> dict[str, str]:
     guessed.
     """
     seen: dict[str, list[str]] = {}
-    depth = 0
-    for line in makefile.splitlines():
-        if re.match(r"^(ifeq|ifneq|ifdef|ifndef)\b", line):
-            depth += 1
-        elif line.startswith("endif"):
-            depth -= 1
-        elif depth == 0 and (match := _ASSIGNMENT.match(line)):
-            seen.setdefault(match.group(1), []).append(match.group(2).strip())
+    for name, value in _unconditional_assignments(makefile):
+        seen.setdefault(name, []).append(value)
     return {name: values[0] for name, values in seen.items() if len(values) == 1}
 
 
@@ -52,18 +66,21 @@ def expand(text: str, known: dict[str, str]) -> str:
     return text
 
 
+def _recipe_start(lines: list[str], target: str) -> int | None:
+    """Return the index of the target's rule line when it is defined once."""
+    pattern = re.compile(rf"^{re.escape(target)}\s*:(?!=)")
+    starts = [index for index, line in enumerate(lines) if pattern.match(line)]
+    return starts[0] if len(starts) == 1 else None
+
+
 def recipe(makefile: str, target: str) -> list[str]:
     """Return a target's recipe lines, with continuations joined."""
     lines = makefile.splitlines()
-    starts = [
-        index
-        for index, line in enumerate(lines)
-        if re.match(rf"^{re.escape(target)}\s*:(?!=)", line)
-    ]
-    if len(starts) != 1:
+    start = _recipe_start(lines, target)
+    if start is None:
         return []
     joined: list[str] = []
-    for line in lines[starts[0] + 1 :]:
+    for line in lines[start + 1 :]:
         if not line.startswith("\t"):
             break
         if joined and joined[-1].endswith("\\"):
@@ -80,42 +97,55 @@ def _binds_status(command: str) -> bool:
     line's status to another command.
     """
     stripped = command.lstrip("@+ ")
-    return not stripped.startswith("-") and not re.search(r"\|\||;|\|", stripped)
+    return not stripped.startswith("-") and not _MASKS_STATUS.search(stripped)
+
+
+def _is_check_invocation(segment: str) -> bool:
+    """Return whether one `&&` segment runs `mdtablefix` with the flags."""
+    words = shlex.split(segment.strip().lstrip("@+"), posix=True)
+    if not words or words[0].rsplit("/", 1)[-1] != "mdtablefix":
+        return False
+    return SELECT_FLAGS <= set(words[1:])
 
 
 def runs_mdtablefix_check(makefile: str) -> bool:
     """Return whether `check-fmt` runs `mdtablefix` with the select flags."""
     known = variables(makefile)
-    for line in recipe(makefile, "check-fmt"):
-        expanded = expand(line, known)
-        for segment in expanded.split("&&"):
-            words = shlex.split(segment.strip().lstrip("@+"), posix=True)
-            if (
-                words
-                and words[0].rsplit("/", 1)[-1] == "mdtablefix"
-                and SELECT_FLAGS <= set(words[1:])
-                and _binds_status(expanded)
-            ):
-                return True
+    expanded = (expand(line, known) for line in recipe(makefile, "check-fmt"))
+    return any(
+        _binds_status(line) and any(map(_is_check_invocation, line.split("&&")))
+        for line in expanded
+    )
+
+
+def _job_steps(documents: dict[str, Document]) -> cabc.Iterator[tuple[str, Steps]]:
+    """Yield each job as `workflow:job` with its steps."""
+    for name, document in documents.items():
+        for job_id, job in jobs(name, document).items():
+            yield f"{name}:{job_id}", typ.cast("Steps", job.get("steps", []))
+
+
+def _checks_before_install(steps: Steps) -> bool:
+    """Return whether a step runs `make check-fmt` before any install step."""
+    for step in steps:
+        if calls(step, INSTALL_ACTION):
+            return False
+        if _RUNS_CHECK_FMT.search(str(step.get("run", ""))):
+            return True
     return False
 
 
 def install_precedes_check_fmt(documents: dict[str, Document]) -> list[str]:
     """Return each job that runs `make check-fmt` without an earlier install."""
-    missing = []
-    for name, document in documents.items():
-        for job_id, job in jobs(name, document).items():
-            installed = False
-            for step in typ.cast("list[dict[str, object]]", job.get("steps", [])):
-                if calls(step, INSTALL_ACTION):
-                    installed = True
-                run = str(step.get("run", ""))
-                if (
-                    re.search(r"(^|\s)make\s+(\S+\s+)*check-fmt(\s|$)", run)
-                    and not installed
-                ):
-                    missing.append(f"{name}:{job_id}")
-    return missing
+    return [
+        label for label, steps in _job_steps(documents) if _checks_before_install(steps)
+    ]
+
+
+def _lint_steps(documents: dict[str, Document]) -> cabc.Iterator[tuple[str, dict]]:
+    """Yield each markdownlint-cli2-action step with its job label."""
+    for label, steps in _job_steps(documents):
+        yield from ((label, step) for step in steps if calls(step, LINT_ACTION))
 
 
 def lint_action_globs(documents: dict[str, Document]) -> list[str]:
@@ -124,21 +154,14 @@ def lint_action_globs(documents: dict[str, Document]) -> list[str]:
     An empty list with no action step at all is not compliance, so the caller
     also asserts that at least one step exists.
     """
-    wrong = []
-    for name, document in documents.items():
-        for job_id, job in jobs(name, document).items():
-            for step in typ.cast("list[dict[str, object]]", job.get("steps", [])):
-                inputs = typ.cast("dict[str, object]", step.get("with") or {})
-                if calls(step, LINT_ACTION) and inputs.get("globs") != "**/*.md":
-                    wrong.append(f"{name}:{job_id}")
-    return wrong
+    return [
+        label
+        for label, step in _lint_steps(documents)
+        if typ.cast("dict[str, object]", step.get("with") or {}).get("globs")
+        != "**/*.md"
+    ]
 
 
 def lint_action_steps(documents: dict[str, Document]) -> int:
     """Return how many steps call the markdownlint-cli2-action."""
-    return sum(
-        calls(step, LINT_ACTION)
-        for name, document in documents.items()
-        for job in jobs(name, document).values()
-        for step in typ.cast("list[dict[str, object]]", job.get("steps", []))
-    )
+    return sum(1 for _ in _lint_steps(documents))

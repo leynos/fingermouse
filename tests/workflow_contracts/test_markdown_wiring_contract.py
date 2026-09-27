@@ -7,7 +7,6 @@ command, so that the rule is proved narrow as well as sufficient.
 
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 
 import pytest
@@ -83,25 +82,33 @@ def test_a_legitimate_check_is_accepted(line: str, variables: str) -> None:
     assert runs_mdtablefix_check(_makefile(line, variables))
 
 
+def _all_steps(documents: dict[str, object]) -> list[list[dict[str, object]]]:
+    """Return every job's step list, for the mutation cases to edit in place."""
+    return [
+        job.get("steps", [])
+        for document in documents.values()
+        for job in document.get("jobs", {}).values()
+    ]
+
+
 def test_an_install_after_check_fmt_is_refused() -> None:
     """Moving the install step below check-fmt is caught."""
     documents = fresh_documents()
-    for document in documents.values():
-        for job in document.get("jobs", {}).values():
-            steps = job.get("steps", [])
-            installs = [s for s in steps if INSTALL_ACTION in str(s.get("uses", ""))]
-            for step in installs:
-                steps.remove(step)
-                steps.append(step)
+    for steps in _all_steps(documents):
+        installs = [s for s in steps if INSTALL_ACTION in str(s.get("uses", ""))]
+        steps[:] = [s for s in steps if s not in installs] + installs
     assert install_precedes_check_fmt(documents) != []
 
 
 def test_narrowed_lint_globs_are_refused() -> None:
     """A markdownlint-cli2-action step linting less than `**/*.md` is caught."""
-    documents = copy.deepcopy(fresh_documents())
-    for document in documents.values():
-        for job in document.get("jobs", {}).values():
-            for step in job.get("steps", []):
-                if "markdownlint-cli2-action" in str(step.get("uses", "")):
-                    step["with"] = {"globs": "docs/**/*.md"}
+    documents = fresh_documents()
+    lint_steps = [
+        step
+        for steps in _all_steps(documents)
+        for step in steps
+        if "markdownlint-cli2-action" in str(step.get("uses", ""))
+    ]
+    for step in lint_steps:
+        step["with"] = {"globs": "docs/**/*.md"}
     assert lint_action_globs(documents) != []
