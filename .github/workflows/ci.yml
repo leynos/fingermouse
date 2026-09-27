@@ -24,15 +24,19 @@ jobs:
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
         uses: leynos/shared-actions/.github/actions/setup-rust@2a910bfcfd1ea4216419f9290331785f05b33320
+      - name: Install mdtablefix
+        # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
+        # first release with `--check` and `--git`.
+        uses: >-
+          leynos/shared-actions/.github/actions/install-mdtablefix@4fb8eb7ad52454678a0662865d81d3cd17aa6e0e
+        with:
+          version: '0.6.0'
       - name: Format
         run: make check-fmt
       - name: Markdown lint
         uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff
         with:
-          globs: |
-            **/*.md
-            !**/target/**
-            !**/dist/**
+          globs: '**/*.md'
       - name: Spelling
         run: make spelling
       - name: Workflow contracts
