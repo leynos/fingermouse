@@ -14,15 +14,22 @@
 //! rather than the Makefile's text, so a flag lost through a variable or a
 //! recipe edit fails here. They run once as a Linux host and once as a macOS
 //! host through `BUILD_HOST_OS`, because mold is added on Linux alone. The
-//! readers are driven against fixtures first, because a rule exercised only
-//! over this repository's own compliant files would pass whether or not it
-//! detects anything.
+//! listed targets are this repository's own: one that stops being defined fails
+//! the contract, so the check cannot quietly stop covering it. The readers are
+//! driven against fixtures first, because a rule exercised only over this
+//! repository's own compliant files would pass whether or not it detects
+//! anything.
 
-#[path = "build_standard_support/readers.rs"]
-mod readers;
-use readers::{
-    Assignment, CONFIG, Flags, Host, Pin, Problems, THREADS_FLAG, TOOLCHAIN, assigned_rustflags,
-    commands_from, config_problems, development_problems, held_out_problems,
+#[path = "build_standard_support/config.rs"]
+mod config;
+#[path = "build_standard_support/make.rs"]
+mod make;
+use rstest::rstest;
+
+use config::{CONFIG, Flags, Pin, Problems, THREADS_FLAG, TOOLCHAIN, config_problems};
+use make::{
+    Assignment, Host, assigned_rustflags, commands_from, development_problems, held_out_problems,
+    held_out_target_count,
 };
 
 /// Turns a list of complaints into a test result.
@@ -34,13 +41,69 @@ fn none_of(problems: &Problems) -> Result<(), String> {
     }
 }
 
-const LINUX_TABLE: &str = "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n";
+/// A toolchain file pinning a nightly channel.
 const NIGHTLY: &str = "[toolchain]\nchannel = \"nightly-2026-05-28\"\n";
+/// A toolchain file pinning a stable channel.
 const STABLE: &str = "[toolchain]\nchannel = \"1.94.0\"\n";
 
-/// Counts the problems the reader finds in a fixture configuration.
-fn problem_count(config: &str, pin: Pin) -> Result<usize, String> {
-    config_problems(config, pin).map(|problems| problems.len())
+/// A compliant nightly configuration: the frontend flag in every source and mold
+/// in the Linux table alone.
+const NIGHTLY_OK: &str = concat!(
+    "[build]\nrustflags = [\"-Zthreads=8\"]\n",
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n"
+);
+/// The same, with the linker flag spelled as the `-C` pair Cargo also accepts.
+const NIGHTLY_SPELLED_APART: &str = concat!(
+    "[build]\nrustflags = [\"-Zthreads=8\"]\n",
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\", \"-C\", \"link-arg=-fuse-ld=mold\"]\n"
+);
+/// A compliant stable configuration: mold alone, in the Linux table.
+const STABLE_OK: &str = concat!(
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Clink-arg=-fuse-ld=mold\"]\n"
+);
+/// A nightly configuration whose `[build]` source lost the frontend flag, so it
+/// is missing it and also differs from the Linux source.
+const BUILD_LOSES_THREADS: &str = concat!(
+    "[build]\nrustflags = [\"-Dwarnings\"]\n",
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n"
+);
+/// A nightly configuration whose Linux table lost mold.
+const LINUX_LOSES_LINKER: &str = concat!(
+    "[build]\nrustflags = [\"-Zthreads=8\"]\n",
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\"]\n"
+);
+/// A nightly configuration that names mold in `[build]`, beyond Linux.
+const LINKER_IN_BUILD: &str = concat!(
+    "[build]\nrustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n",
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n"
+);
+/// A nightly configuration with no `[build]` source for the other hosts.
+const NO_BUILD_SOURCE: &str = concat!(
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n"
+);
+/// A stable configuration that names the nightly-only frontend flag.
+const STABLE_WITH_THREADS: &str = concat!(
+    "[target.x86_64-unknown-linux-gnu]\nlinker = \"clang\"\n",
+    "rustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n"
+);
+/// A `rustflags` array spread over several lines, which the reader refuses.
+const SPREAD_ARRAY: &str = "[build]\nrustflags = [\n  \"-Zthreads=8\",\n]\n";
+
+/// Checks that a fixture configuration draws the expected number of complaints.
+fn draws(config: &str, pin: Pin, expected: usize) -> Result<(), String> {
+    let found = config_problems(config, pin)?.len();
+    if found == expected {
+        Ok(())
+    } else {
+        Err(format!("{config:?}: {found} problems, not {expected}"))
+    }
 }
 
 /// Scenario: configurations of each shape, read on a nightly and a stable pin.
@@ -48,107 +111,104 @@ fn problem_count(config: &str, pin: Pin) -> Result<usize, String> {
 /// Invariant: a compliant nightly file passes, and each way of losing the
 /// frontend flag, losing mold, naming mold beyond Linux, or letting a source
 /// drift is reported; a stable pin refuses the frontend flag it cannot take.
+#[rstest]
+#[case::compliant_nightly(NIGHTLY_OK, Pin::Nightly, 0)]
+#[case::linker_spelled_as_a_pair(NIGHTLY_SPELLED_APART, Pin::Nightly, 0)]
+#[case::compliant_stable(STABLE_OK, Pin::Stable, 0)]
+#[case::build_loses_the_frontend(BUILD_LOSES_THREADS, Pin::Nightly, 2)]
+#[case::linux_loses_the_linker(LINUX_LOSES_LINKER, Pin::Nightly, 1)]
+#[case::linker_named_in_build(LINKER_IN_BUILD, Pin::Nightly, 1)]
+#[case::no_build_source(NO_BUILD_SOURCE, Pin::Nightly, 1)]
+#[case::stable_names_the_frontend(STABLE_WITH_THREADS, Pin::Stable, 1)]
+#[case::empty_configuration("", Pin::Nightly, 3)]
+fn the_configuration_reader_reports_each_defect(
+    #[case] config: &str,
+    #[case] pin: Pin,
+    #[case] expected: usize,
+) -> Result<(), String> {
+    draws(config, pin, expected)
+}
+
+/// Scenario: a `rustflags` array spread over several lines.
+///
+/// Invariant: the reader refuses it, because reading half of an entry would let
+/// a lost flag pass.
 #[test]
-fn the_configuration_reader_reports_each_defect() -> Result<(), String> {
-    let nightly_ok = format!(
-        "[build]\nrustflags = [\"-Zthreads=8\"]\n{LINUX_TABLE}rustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]\n"
-    );
-    let spelled_apart = nightly_ok.replace(
-        "\"-Clink-arg=-fuse-ld=mold\"",
-        "\"-C\", \"link-arg=-fuse-ld=mold\"",
-    );
-    let stable_ok = format!("{LINUX_TABLE}rustflags = [\"-Clink-arg=-fuse-ld=mold\"]\n");
-    let mold_in_build = nightly_ok.replace(
-        "[build]\nrustflags = [\"-Zthreads=8\"]",
-        "[build]\nrustflags = [\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]",
-    );
-    let linux_without_mold = nightly_ok.replace(
-        "[\"-Zthreads=8\", \"-Clink-arg=-fuse-ld=mold\"]",
-        "[\"-Zthreads=8\"]",
-    );
-    let cases = [
-        (&nightly_ok, Pin::Nightly, 0),
-        (&spelled_apart, Pin::Nightly, 0),
-        (&stable_ok, Pin::Stable, 0),
-        (
-            &nightly_ok.replace("[\"-Zthreads=8\"]", "[\"-Dwarnings\"]"),
-            Pin::Nightly,
-            2,
-        ),
-        (&linux_without_mold, Pin::Nightly, 1),
-        (&mold_in_build, Pin::Nightly, 1),
-        (
-            &nightly_ok.replace("[build]\nrustflags = [\"-Zthreads=8\"]\n", ""),
-            Pin::Nightly,
-            1,
-        ),
-        (
-            &stable_ok.replace("[\"-Clink", "[\"-Zthreads=8\", \"-Clink"),
-            Pin::Stable,
-            1,
-        ),
-        (&String::new(), Pin::Nightly, 3),
-    ];
-    for (config, pin, expected) in cases {
-        let found = problem_count(config, pin)?;
-        if found != expected {
-            return Err(format!("{config:?}: {found} problems, not {expected}"));
-        }
+fn a_rustflags_array_spread_over_lines_is_refused() -> Result<(), String> {
+    match config_problems(SPREAD_ARRAY, Pin::Nightly) {
+        Ok(_) => Err("a rustflags array spread over lines was read".to_owned()),
+        Err(_) => Ok(()),
     }
-    if config_problems(
-        "[build]\nrustflags = [\n  \"-Zthreads=8\",\n]\n",
-        Pin::Nightly,
-    )
-    .is_ok()
-    {
-        return Err("a rustflags array spread over lines was read".to_owned());
-    }
-    if Pin::read(NIGHTLY) != Pin::Nightly || Pin::read(STABLE) != Pin::Stable {
-        return Err("the pin reader misjudged a channel".to_owned());
-    }
-    Ok(())
+}
+
+/// Scenario: toolchain files pinning each kind of channel.
+///
+/// Invariant: only a `nightly` channel reads as nightly, so only it is asked to
+/// carry `-Zthreads`.
+#[rstest]
+#[case::nightly(NIGHTLY, Pin::Nightly)]
+#[case::stable(STABLE, Pin::Stable)]
+fn the_pin_reader_tells_the_channels_apart(#[case] toolchain: &str, #[case] expected: Pin) {
+    assert_eq!(Pin::read(toolchain), expected);
+}
+
+/// Builds the assignment a fixture line is expected to read as.
+fn flags(words: &[&str]) -> Assignment {
+    Assignment::Flags(Flags::from_words(words.iter().copied()))
 }
 
 /// Scenario: `make -n` output lines in each spelling of an assignment.
 ///
-/// Invariant: a quoted assignment is read, a line assigning none reads as
-/// unassigned, and an unquoted assignment fails rather than passing.
+/// Invariant: a quoted assignment is read, with the caller's inherited flags set
+/// aside, and a line assigning none reads as unassigned.
+#[rstest]
+#[case::plain("RUSTFLAGS=\"-D warnings -Zthreads=8\" cargo test", flags(&["-D", "warnings", THREADS_FLAG]))]
+#[case::inherited_flags_glued_on(
+    "RUSTFLAGS=\"${RUSTFLAGS:+$RUSTFLAGS }-Zthreads=8\" cargo check",
+    flags(&[THREADS_FLAG])
+)]
+#[case::inherited_flags_only("RUSTFLAGS=\"${RUSTFLAGS-}\" cargo build --release", flags(&[]))]
+#[case::no_assignment("cargo clippy --all-targets", Assignment::Unassigned)]
+fn the_command_reader_reads_each_assignment(
+    #[case] line: &str,
+    #[case] expected: Assignment,
+) -> Result<(), String> {
+    if assigned_rustflags(line)? == expected {
+        Ok(())
+    } else {
+        Err(format!("`{line}` was read wrongly"))
+    }
+}
+
+/// Scenario: `make -n` output lines whose assignment the reader cannot parse.
+///
+/// Invariant: each is refused rather than passed, because an assignment in a
+/// form the reader does not understand still replaces the configuration.
+#[rstest]
+#[case::unquoted("RUSTFLAGS=-Zthreads=8 cargo test")]
+#[case::unterminated("RUSTFLAGS=\"-Zthreads=8 cargo test")]
+fn the_command_reader_refuses_what_it_cannot_parse(#[case] line: &str) -> Result<(), String> {
+    match assigned_rustflags(line) {
+        Ok(_) => Err(format!("`{line}` was read, not refused")),
+        Err(_) => Ok(()),
+    }
+}
+
+/// Scenario: a recipe continued over lines, beside an `echo` and another command.
+///
+/// Invariant: the continued command is one command, and lines that are not a
+/// Cargo or Whitaker command are ignored.
 #[test]
-fn the_command_reader_reads_only_what_it_understands() -> Result<(), String> {
-    let flags = |words: &[&str]| Assignment::Flags(Flags::from_words(words.iter().copied()));
-    let cases = [
-        (
-            "RUSTFLAGS=\"-D warnings -Zthreads=8\" cargo test",
-            flags(&["-D", "warnings", THREADS_FLAG]),
-        ),
-        (
-            "RUSTFLAGS=\"${RUSTFLAGS:+$RUSTFLAGS }-Zthreads=8\" cargo check",
-            flags(&[THREADS_FLAG]),
-        ),
-        (
-            "RUSTFLAGS=\"${RUSTFLAGS-}\" cargo build --release",
-            flags(&[]),
-        ),
-        ("cargo clippy --all-targets", Assignment::Unassigned),
-    ];
-    for (line, expected) in cases {
-        if assigned_rustflags(line)? != expected {
-            return Err(format!("`{line}` was read wrongly"));
-        }
+fn a_continued_command_is_one_command() -> Result<(), String> {
+    let joined = commands_from(concat!(
+        "RUSTFLAGS=\"-A\" \\\n",
+        "cargo test\necho cargo test\nmake other\n"
+    ))?;
+    if joined == vec![flags(&["-A"])] {
+        Ok(())
+    } else {
+        Err(format!("read wrongly: {joined:?}"))
     }
-    for refused in [
-        "RUSTFLAGS=-Zthreads=8 cargo test",
-        "RUSTFLAGS=\"-Zthreads=8 cargo test",
-    ] {
-        if assigned_rustflags(refused).is_ok() {
-            return Err(format!("`{refused}` was read, not refused"));
-        }
-    }
-    let joined = commands_from("RUSTFLAGS=\"-A\" \\\ncargo test\necho cargo test\nmake other\n")?;
-    if joined != vec![flags(&["-A"])] {
-        return Err(format!("a continued command was read wrongly: {joined:?}"));
-    }
-    Ok(())
 }
 
 #[test]
@@ -169,12 +229,21 @@ fn development_targets_restate_the_flags_on_linux() -> Result<(), String> {
 }
 
 #[test]
-fn development_targets_keep_the_frontend_but_not_mold_elsewhere() -> Result<(), String> {
+fn development_targets_keep_the_frontend_but_not_the_linker_elsewhere() -> Result<(), String> {
     none_of(&development_problems(Host::Darwin, Pin::read(TOOLCHAIN))?.0)
 }
 
-/// Coverage measures and release ships, so both stay on the default flags.
+/// Coverage measures and release ships, so both stay on the default flags. A
+/// repository that lists no such target has nothing local to hold out, and the
+/// check then reads no commands; otherwise it must read at least one.
 #[test]
 fn coverage_and_release_take_neither_flag() -> Result<(), String> {
-    none_of(&held_out_problems()?)
+    let (problems, read) = held_out_problems()?;
+    none_of(&problems)?;
+    if held_out_target_count() > 0 && read == 0 {
+        return Err(
+            "the held-out targets run no cargo command, so the check proves nothing".to_owned(),
+        );
+    }
+    Ok(())
 }
