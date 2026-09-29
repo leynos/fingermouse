@@ -75,8 +75,12 @@ for a scratch container, use `cargo zigbuild`:
 
 ```bash
 cargo install cargo-zigbuild
-cargo zigbuild --target x86_64-unknown-linux-musl --release
+RUSTFLAGS= cargo zigbuild --target x86_64-unknown-linux-musl --release
 ```
+
+The empty `RUSTFLAGS` keeps the release on the platform linker: an assigned
+`RUSTFLAGS` displaces the development flags (the parallel frontend and mold) in
+`.cargo/config.toml`, which the release does not use.
 
 The resulting binary in `target/x86_64-unknown-linux-musl/release` can be
 copied into a `FROM scratch` image together with the `profiles/` and `plans/`
