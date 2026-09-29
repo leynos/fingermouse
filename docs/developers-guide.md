@@ -18,6 +18,13 @@ recipes that set it compose the standard's flags onto any inherited value (CI's
 assigns `RUSTFLAGS` without the fast flags, because a measurement should not
 depend on them, and release builds keep the platform linker.
 
+On Linux, install `mold` before building: the configuration names it, so a
+build without it fails at link time. CI installs it through `setup-rust`'s
+`install-mold` input. `tests/build_standard_contract.rs` holds the standard. It
+reads the configuration sources, and the commands `make -n` prints for each
+development, coverage and release target on a Linux host and a macOS host, so a
+flag lost through a recipe edit fails there.
+
 ### Cranelift
 
 Exception: Cranelift is not the development-profile backend. The repository pins
