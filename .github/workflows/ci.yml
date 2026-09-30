@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@b7d70b5d3ff0ac0199416b9678ea7af25bb3254e
+        uses: leynos/shared-actions/.github/actions/setup-rust@6cec89bac47a21cf756d68d638a9a510998e57f8
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
@@ -66,7 +66,7 @@ jobs:
       # the baseline this compares against and owns the CodeScene upload, so
       # the selection below must match that workflow's field for field.
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@a06e1b8f83ce7f9da5bb26625ef2b7021adbf958
+        uses: leynos/shared-actions/.github/actions/generate-coverage@6cec89bac47a21cf756d68d638a9a510998e57f8
         with:
           output-path: lcov.info
           format: lcov
