@@ -13,7 +13,7 @@ import re
 import shlex
 import typing as typ
 
-from codescene_workflow_reader import Document, calls, jobs
+from workflow_reader import Document, calls, jobs
 
 if typ.TYPE_CHECKING:
     import collections.abc as cabc
