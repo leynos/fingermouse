@@ -66,7 +66,7 @@ jobs:
       # the baseline this compares against and owns the CodeScene upload, so
       # the selection below must match that workflow's field for field.
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@a06e1b8f83ce7f9da5bb26625ef2b7021adbf958
+        uses: leynos/shared-actions/.github/actions/generate-coverage@c856f4c570e8d83d64318ee2768a4906d0d807f6
         with:
           output-path: lcov.info
           format: lcov
