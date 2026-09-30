@@ -24,6 +24,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
         uses: leynos/shared-actions/.github/actions/setup-rust@c856f4c570e8d83d64318ee2768a4906d0d807f6
+        with:
+          install-mold: 'true'
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
@@ -66,6 +68,12 @@ jobs:
       # the baseline this compares against and owns the CodeScene upload, so
       # the selection below must match that workflow's field for field.
       - name: Test and Measure Coverage
+        env:
+          # One of the two exclusions from the build standard: a coverage build is
+          # a measurement, so it takes neither the parallel frontend nor the mold
+          # linker. Assigning RUSTFLAGS displaces every `rustflags` table in
+          # .cargo/config.toml.
+          RUSTFLAGS: -D warnings
         uses: leynos/shared-actions/.github/actions/generate-coverage@a06e1b8f83ce7f9da5bb26625ef2b7021adbf958
         with:
           output-path: lcov.info

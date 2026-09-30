@@ -45,6 +45,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: Build release binary
+        # A release is built with the platform linker and without the build
+        # standard's nightly-only flags: an assigned RUSTFLAGS displaces every
+        # `rustflags` table in .cargo/config.toml (cross passes it into the
+        # container). The value is what the toolchain action exports anyway.
+        env:
+          RUSTFLAGS: -D warnings
         run: cross +stable build --release --target ${{ matrix.target }}
       - name: Prepare artifact
         run: |
@@ -78,6 +84,12 @@ jobs:
       - name: Add target
         run: rustup target add ${{ matrix.target }}
       - name: Build release binary
+        # A release is built with the platform linker and without the build
+        # standard's nightly-only flags: an assigned RUSTFLAGS displaces every
+        # `rustflags` table in .cargo/config.toml (cross passes it into the
+        # container). The value is what the toolchain action exports anyway.
+        env:
+          RUSTFLAGS: -D warnings
         run: cargo build --release --target ${{ matrix.target }}
       - name: Prepare artifact
         run: |
@@ -113,6 +125,12 @@ jobs:
         run: rustup target add ${{ matrix.target }}
       - name: Build release binary
         shell: pwsh
+        # A release is built with the platform linker and without the build
+        # standard's nightly-only flags: an assigned RUSTFLAGS displaces every
+        # `rustflags` table in .cargo/config.toml (cross passes it into the
+        # container). The value is what the toolchain action exports anyway.
+        env:
+          RUSTFLAGS: -D warnings
         run: cargo build --release --target ${{ matrix.target }}
       - name: Prepare artifact
         shell: pwsh
@@ -149,7 +167,10 @@ jobs:
             pkg install -y rust
           run: |
             cd /workdir
-            cargo build --release --target ${{ matrix.target }}
+            # The VM's packaged Rust is stable, so the build standard's
+            # nightly-only flags in .cargo/config.toml must not reach it:
+            # an assigned (even empty) RUSTFLAGS displaces them.
+            RUSTFLAGS='' cargo build --release --target ${{ matrix.target }}
       - name: Prepare artifact
         run: |
           mkdir -p artifacts/${{ matrix.artifact_suffix }}
@@ -185,7 +206,10 @@ jobs:
             pkg_add -I rust
           run: |
             cd /workdir
-            cargo build --release --target ${{ matrix.target }}
+            # The VM's packaged Rust is stable, so the build standard's
+            # nightly-only flags in .cargo/config.toml must not reach it:
+            # an assigned (even empty) RUSTFLAGS displaces them.
+            RUSTFLAGS='' cargo build --release --target ${{ matrix.target }}
       - name: Prepare artifact
         run: |
           mkdir -p artifacts/${{ matrix.artifact_suffix }}
