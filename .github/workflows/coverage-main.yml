@@ -75,7 +75,7 @@ jobs:
       # what stops a dispatch from a branch uploading that branch's coverage.
       - name: Upload coverage data to CodeScene
         if: steps.codescene-token.outputs.available == 'true' && github.ref == 'refs/heads/main'
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@a06e1b8f83ce7f9da5bb26625ef2b7021adbf958
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@c856f4c570e8d83d64318ee2768a4906d0d807f6
         with:
           path: lcov.info
           format: lcov
