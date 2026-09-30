@@ -3,7 +3,7 @@ name: Coverage (main)
 # Main owns both persistent coverage outputs: the ratchet baseline and the
 # CodeScene upload. Pull requests generate coverage only for their own ratchet
 # check, in ci.yml; they neither publish a report nor contact CodeScene, and
-# the CV-005 contract tests under tests/workflow_contracts hold that shape.
+# `make workflow-contracts` holds that shape.
 #
 # The CodeScene call is what moves here, not the archive: the shared uploader
 # pins the cs-coverage archive by digest, but the tool talks to CodeScene's API

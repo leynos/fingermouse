@@ -1,0 +1,8 @@
+repository = "leynos/fingermouse"
+
+# What the ratchet baseline measures: the publisher's generator must carry
+# exactly these inputs, and every lane must measure the same selection.
+[selection]
+output-path = "lcov.info"
+format = "lcov"
+with-ratchet = "true"
