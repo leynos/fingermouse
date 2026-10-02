@@ -19,6 +19,8 @@ mod exhaustive;
 mod fixtures;
 #[path = "build_standard_support/make.rs"]
 mod make;
+use std::fmt::Write as _;
+
 use rstest::rstest;
 
 use fixtures::{
@@ -35,7 +37,7 @@ use ci_steps::{Workflow, coverage_problems, linker_install_problems, workflow_pr
 use config::{CONFIG, Flags, Pin, Problems, THREADS_FLAG, TOOLCHAIN, config_problems};
 use make::{
     Assignment, Host, assigned_rustflags, commands_from, development_problem, development_problems,
-    held_out_problems, held_out_target_count,
+    held_out_problems, held_out_target_count, real_make,
 };
 
 /// Turns a list of complaints into a test result.
@@ -246,7 +248,7 @@ fn every_rustflags_source_is_consistent_with_the_pin() -> Result<(), String> {
 
 #[test]
 fn development_targets_restate_the_flags_on_linux() -> Result<(), String> {
-    let (problems, read) = development_problems(Host::Linux, Pin::read(TOOLCHAIN)?)?;
+    let (problems, read) = development_problems(real_make, Host::Linux, Pin::read(TOOLCHAIN)?)?;
     none_of(&problems)?;
     if read == 0 {
         return Err(
@@ -258,7 +260,7 @@ fn development_targets_restate_the_flags_on_linux() -> Result<(), String> {
 
 #[test]
 fn development_targets_keep_the_frontend_but_not_the_linker_elsewhere() -> Result<(), String> {
-    none_of(&development_problems(Host::Darwin, Pin::read(TOOLCHAIN)?)?.0)
+    none_of(&development_problems(real_make, Host::Darwin, Pin::read(TOOLCHAIN)?)?.0)
 }
 
 /// Coverage measures and release ships, so both stay on the default flags. A
@@ -266,7 +268,7 @@ fn development_targets_keep_the_frontend_but_not_the_linker_elsewhere() -> Resul
 /// check then reads no commands; otherwise it must read at least one.
 #[test]
 fn coverage_and_release_take_neither_flag() -> Result<(), String> {
-    let (problems, read) = held_out_problems()?;
+    let (problems, read) = held_out_problems(real_make)?;
     none_of(&problems)?;
     if held_out_target_count() > 0 && read == 0 {
         return Err(
@@ -298,4 +300,65 @@ fn the_test_target_keeps_the_warning_policy(
         .into_iter()
         .count();
     assert_eq!(found, expected, "target {target}: {words:?}");
+}
+
+/// Renders canned `make -n` text for a fake runner through a fallible writer, so
+/// the fakes keep the runner's `Result` shape honestly.
+fn canned(text: std::fmt::Arguments) -> Result<String, String> {
+    let mut out = String::new();
+    out.write_fmt(text).map_err(|error| error.to_string())?;
+    Ok(out)
+}
+
+/// A fake runner: a compliant `make -n` for any target, with no process behind it.
+fn compliant_make(_target: &str, host: Host) -> Result<String, String> {
+    let linker = if host.takes_linker_flag() {
+        " -Clink-arg=-fuse-ld=mold"
+    } else {
+        ""
+    };
+    canned(format_args!(
+        "RUSTFLAGS=\"${{RUSTFLAGS:+$RUSTFLAGS }}-D warnings {THREADS_FLAG}{linker}\" cargo test\n"
+    ))
+}
+
+/// A fake runner whose command loses the caller's `RUSTFLAGS`.
+fn dropping_make(_target: &str, _host: Host) -> Result<String, String> {
+    canned(format_args!("RUSTFLAGS=\"-D warnings\" cargo test\n"))
+}
+
+/// A fake runner for a target that is not defined.
+fn undefined_make(target: &str, _host: Host) -> Result<String, String> {
+    Err(format!("`make -n {target}` failed, so it is not defined"))
+}
+
+/// Scenario: the policy checks fed canned `make -n` text through the injected
+/// runner, so no process runs.
+///
+/// Invariant: a compliant command raises no complaint on either host, a command
+/// that drops the caller's flags raises one per target, and a runner error
+/// reaches the caller instead of being read as an empty output.
+#[test]
+fn the_policy_checks_run_against_an_injected_runner() {
+    let pin = Pin::Nightly;
+    for host in [Host::Linux, Host::Darwin] {
+        let (problems, read) =
+            development_problems(compliant_make, host, pin).expect("a compliant fake reads");
+        assert!(problems.is_empty(), "a compliant fake raised {problems:?}");
+        assert!(read > 0, "the fake's commands were not read");
+    }
+    let (dropped, _) =
+        development_problems(dropping_make, Host::Linux, pin).expect("the dropping fake reads");
+    assert!(
+        !dropped.is_empty(),
+        "a command that drops the caller's flags passed"
+    );
+    assert!(
+        development_problems(undefined_make, Host::Linux, pin).is_err(),
+        "a runner error was swallowed"
+    );
+    assert!(
+        held_out_problems(undefined_make).is_err(),
+        "a held-out runner error was swallowed"
+    );
 }

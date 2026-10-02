@@ -32,7 +32,7 @@ impl Host {
     }
 
     /// Returns whether the host takes mold, which ships for Linux alone.
-    const fn takes_linker_flag(self) -> bool {
+    pub const fn takes_linker_flag(self) -> bool {
         matches!(self, Self::Linux)
     }
 }
@@ -112,8 +112,18 @@ pub fn commands_from(stdout: &str) -> Result<Vec<Assignment>, String> {
         .collect()
 }
 
-/// Runs `make -n` for a target on a host and reads its commands.
-fn make_commands(target: &str, host: Host) -> Result<Vec<Assignment>, String> {
+/// Runs `make -n` for a target on a host and returns what it printed. The tests
+/// that drive real `make` use [`real_make`]; a test of the parsing path passes a
+/// function that returns canned text instead, so no process runs.
+pub type MakeRunner = fn(&str, Host) -> Result<String, String>;
+
+/// The integration adapter: runs the real `make -n` in the crate's directory and
+/// reports a spawn failure or an undefined target as an error.
+///
+/// # Errors
+///
+/// Returns the reason when `make` cannot run or the target is not defined.
+pub fn real_make(target: &str, host: Host) -> Result<String, String> {
     let output = Command::new("make")
         .args([
             "-n",
@@ -130,7 +140,12 @@ fn make_commands(target: &str, host: Host) -> Result<Vec<Assignment>, String> {
             "`make -n {target}` failed, so it is not defined: {stderr}"
         ));
     }
-    commands_from(&String::from_utf8_lossy(&output.stdout))
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+/// Reads the commands a runner reports for a target on a host.
+fn make_commands(runner: MakeRunner, target: &str, host: Host) -> Result<Vec<Assignment>, String> {
+    commands_from(&runner(target, host)?)
 }
 
 /// Returns the complaint about one development command, if any: an assigned
@@ -166,11 +181,15 @@ pub fn development_problem(
 /// # Errors
 ///
 /// Returns the reason when a listed target is not defined or unreadable.
-pub fn development_problems(host: Host, pin: Pin) -> Result<(Problems, usize), String> {
+pub fn development_problems(
+    runner: MakeRunner,
+    host: Host,
+    pin: Pin,
+) -> Result<(Problems, usize), String> {
     let mut problems = Vec::new();
     let mut read = 0;
     for target in DEVELOPMENT_TARGETS {
-        let commands = make_commands(target, host)?;
+        let commands = make_commands(runner, target, host)?;
         read += commands
             .iter()
             .filter(|command| **command != Assignment::Unassigned)
@@ -210,11 +229,11 @@ fn held_out_command_problems(target: &str, assignment: &Assignment) -> Problems 
 /// # Errors
 ///
 /// Returns the reason when a listed target is not defined or unreadable.
-pub fn held_out_problems() -> Result<(Problems, usize), String> {
+pub fn held_out_problems(runner: MakeRunner) -> Result<(Problems, usize), String> {
     let mut problems = Vec::new();
     let mut read = 0;
     for target in HELD_OUT_TARGETS {
-        let commands = make_commands(target, Host::Linux)?;
+        let commands = make_commands(runner, target, Host::Linux)?;
         read += commands.len();
         problems.extend(
             commands
