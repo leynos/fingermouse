@@ -105,6 +105,8 @@ pub fn commands_from(stdout: &str) -> Result<Vec<Assignment>, String> {
     joined
         .lines()
         .filter(|line| !line.trim_start().starts_with("echo"))
+        // A tool-availability probe names Cargo but runs no build.
+        .filter(|line| !line.trim_start().starts_with("command -v"))
         .filter(|line| line.contains("cargo") || line.contains("whitaker"))
         .map(assigned_rustflags)
         .collect()
@@ -133,8 +135,8 @@ fn make_commands(target: &str, host: Host) -> Result<Vec<Assignment>, String> {
 
 /// Returns the complaint about one development command, if any: an assigned
 /// `RUSTFLAGS` keeps the caller's own flags and restates the frontend flag on a
-/// nightly pin, and mold on Linux.
-fn development_problem(
+/// nightly pin, and mold on Linux; the `test` target also keeps `-D warnings`.
+pub fn development_problem(
     target: &str,
     host: Host,
     pin: Pin,
@@ -149,7 +151,12 @@ fn development_problem(
             host.make_value()
         ));
     }
-    let reason = flags.meets(pin, host.takes_linker_flag()).err()?;
+    let drops_the_policy =
+        (target == "test" && !flags.denies_warnings()).then(|| "drops -D warnings".to_owned());
+    let reason = flags
+        .meets(pin, host.takes_linker_flag())
+        .err()
+        .or(drops_the_policy)?;
     Some(format!("`make {target}` on {} {reason}", host.make_value()))
 }
 
