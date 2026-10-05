@@ -41,7 +41,7 @@ jobs:
       - name: Workflow contracts
         run: make workflow-contracts
       - name: Install the Whitaker Dylint suite
-        uses: leynos/shared-actions/.github/actions/install-whitaker@ff1dd759dfffc0db3459e30e833f52437ee62b57
+        uses: leynos/shared-actions/.github/actions/install-whitaker@7d751eded578e48dacf43ab173d5820e6437c474
       - name: Lint
         run: make lint
       # Coverage here serves the local ratchet and nothing else: the report is
