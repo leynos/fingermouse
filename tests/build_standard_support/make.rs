@@ -132,6 +132,14 @@ pub struct Target<'a>(pub &'a str);
 
 impl<'a> Target<'a> {
     /// Returns the target's name.
+    ///
+    /// # Parameters
+    ///
+    /// - `self`: the target.
+    ///
+    /// # Returns
+    ///
+    /// The Makefile target's name, as the text `make` takes.
     pub const fn name(self) -> &'a str {
         self.0
     }
@@ -144,6 +152,15 @@ pub type MakeRunner = fn(Target<'_>, Host) -> Result<String, String>;
 
 /// The integration adapter: runs the real `make -n` in the crate's directory and
 /// reports a spawn failure or an undefined target as an error.
+///
+/// # Parameters
+///
+/// - `target`: the Makefile target to print the commands of.
+/// - `host`: the host `make` is told it runs on, through `BUILD_HOST_OS`.
+///
+/// # Returns
+///
+/// The commands `make -n` printed for the target.
 ///
 /// # Errors
 ///
