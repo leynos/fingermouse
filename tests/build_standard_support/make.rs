@@ -2,8 +2,6 @@
 //! prints for each development, coverage and release target, judged against a
 //! toolchain pin and a host.
 
-use std::process::Command;
-
 use super::{
     config::{Flags, LINKER_FLAG, Pin, Problems, THREADS_FLAG},
     shell::{compiles, shell_commands, without_leading_keywords},
@@ -27,7 +25,7 @@ pub enum Host {
 
 impl Host {
     /// Returns the value `uname -s` reports for the host.
-    const fn make_value(self) -> &'static str {
+    pub const fn make_value(self) -> &'static str {
         match self {
             Self::Linux => "Linux",
             Self::Darwin => "Darwin",
@@ -146,45 +144,9 @@ impl<'a> Target<'a> {
 }
 
 /// Runs `make -n` for a target on a host and returns what it printed. The tests
-/// that drive real `make` use [`real_make`]; a test of the parsing path passes a
-/// function that returns canned text instead, so no process runs.
+/// that drive real `make` use `real_make` from the process module; a test of the
+/// parsing path passes a function that returns canned text instead, so no process runs.
 pub type MakeRunner = fn(Target<'_>, Host) -> Result<String, String>;
-
-/// The integration adapter: runs the real `make -n` in the crate's directory and
-/// reports a spawn failure or an undefined target as an error.
-///
-/// # Parameters
-///
-/// - `target`: the Makefile target to print the commands of.
-/// - `host`: the host `make` is told it runs on, through `BUILD_HOST_OS`.
-///
-/// # Returns
-///
-/// The commands `make -n` printed for the target.
-///
-/// # Errors
-///
-/// Returns the reason when `make` cannot run or the target is not defined.
-pub fn real_make(target: Target<'_>, host: Host) -> Result<String, String> {
-    let name = target.name();
-    let output = Command::new("make")
-        .args([
-            "-n",
-            "-B",
-            &format!("BUILD_HOST_OS={}", host.make_value()),
-            name,
-        ])
-        .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
-        .map_err(|error| format!("running make: {error}"))?;
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if !output.status.success() {
-        return Err(format!(
-            "`make -n {name}` failed, so it is not defined: {stderr}"
-        ));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-}
 
 /// Reads the commands a runner reports for a target on a host.
 fn make_commands(runner: MakeRunner, target: &str, host: Host) -> Result<Vec<Assignment>, String> {
@@ -325,6 +287,16 @@ pub fn held_out_problems_for(
     for target in targets {
         let commands = make_commands(runner, target, Host::Linux)?;
         read += commands.len();
+        // A command that assigns nothing and runs no build tool (a formatter, a metadata probe) is
+        // `Unassigned`; a target made only of those would hide behind the other targets' count.
+        if !commands
+            .iter()
+            .any(|command| !matches!(command, Assignment::Unassigned))
+        {
+            problems.push(format!(
+                "`make {target}` runs no build or test command, so the check reads nothing of it"
+            ));
+        }
         problems.extend(
             commands
                 .iter()
