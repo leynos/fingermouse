@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from codescene_contract_support import WORKFLOWS, fresh_documents
+from workflow_documents import WORKFLOWS, fresh_documents
 from markdown_wiring_rules import (
     INSTALL_ACTION,
     install_precedes_check_fmt,

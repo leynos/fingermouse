@@ -13,7 +13,6 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       BUILD_PROFILE: debug
-      WHITAKER_INSTALLER_VERSION: '0.2.6'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -23,14 +22,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@c856f4c570e8d83d64318ee2768a4906d0d807f6
+        uses: leynos/shared-actions/.github/actions/setup-rust@7d751eded578e48dacf43ab173d5820e6437c474
         with:
           install-mold: 'true'
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
         uses: >-
-          leynos/shared-actions/.github/actions/install-mdtablefix@a06e1b8f83ce7f9da5bb26625ef2b7021adbf958
+          leynos/shared-actions/.github/actions/install-mdtablefix@7d751eded578e48dacf43ab173d5820e6437c474
         with:
           version: '0.6.0'
       - name: Format
@@ -43,24 +42,8 @@ jobs:
         run: make spelling
       - name: Workflow contracts
         run: make workflow-contracts
-      - name: Cache whitaker-installer
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-        with:
-          path: |
-            ~/.cargo/bin/whitaker-installer
-            ~/.cache/cargo-binstall
-          key: whitaker-installer-${{ runner.os }}-${{ runner.arch }}-${{ env.WHITAKER_INSTALLER_VERSION }}
       - name: Install the Whitaker Dylint suite
-        run: |
-          if ! command -v whitaker-installer >/dev/null 2>&1; then
-            if cargo binstall --version >/dev/null 2>&1; then
-              cargo binstall --no-confirm --locked "whitaker-installer@${WHITAKER_INSTALLER_VERSION}"
-            else
-              echo "cargo-binstall unavailable; building whitaker-installer from crates.io"
-              cargo install --locked whitaker-installer --version "${WHITAKER_INSTALLER_VERSION}"
-            fi
-          fi
-          whitaker-installer
+        uses: leynos/shared-actions/.github/actions/install-whitaker@ff1dd759dfffc0db3459e30e833f52437ee62b57
       - name: Lint
         run: make lint
       # Coverage here serves the local ratchet and nothing else: the report is
@@ -74,7 +57,7 @@ jobs:
           # linker. Assigning RUSTFLAGS displaces every `rustflags` table in
           # .cargo/config.toml.
           RUSTFLAGS: -D warnings
-        uses: leynos/shared-actions/.github/actions/generate-coverage@a06e1b8f83ce7f9da5bb26625ef2b7021adbf958
+        uses: leynos/shared-actions/.github/actions/generate-coverage@6cec89bac47a21cf756d68d638a9a510998e57f8
         with:
           output-path: lcov.info
           format: lcov

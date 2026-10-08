@@ -1,9 +1,8 @@
-"""Read GitHub workflow files strictly, for the CV-005 contract.
+"""Read GitHub workflow files strictly, for the contracts in this directory.
 
 Only `read_workflows` touches the disk; everything else is pure over parsed
-documents, so the rules in `codescene_pull_request_rules` and
-`codescene_publisher_rules` can be driven over mutated copies as readily as
-over this repository's files.
+documents, so a rule can be driven over mutated copies as readily as over this
+repository's files.
 
 A reading that finds nothing is a fault of the reader, not a pass: every rule
 built on these readings is a refusal, and a refusal over an empty subject set
