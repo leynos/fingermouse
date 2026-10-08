@@ -128,10 +128,10 @@ project:
 
     validating Rust formatting across the entire workspace and Markdown
     formatting across the files Git tracks, plus untracked files Git does not
-    ignore, without modifying files. The Markdown check needs mdtablefix 0.6.0
+    ignore, without modifying files. The Markdown check needs mdtablefix 0.6.1
     or later on `PATH`; install it with
-    `cargo binstall --no-confirm mdtablefix@0.6.0` (or
-    `cargo install --locked mdtablefix@0.6.0`), the version CI pins. `make fmt`
+    `cargo binstall --no-confirm mdtablefix@0.6.1` (or
+    `cargo install --locked mdtablefix@0.6.1`), the version CI pins. `make fmt`
     rewrites the same files with `mdtablefix --in-place` and then runs
     `markdownlint-cli2 --fix`.
   - `make lint` executes:
