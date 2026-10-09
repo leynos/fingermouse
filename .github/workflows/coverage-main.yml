@@ -55,7 +55,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@7d751eded578e48dacf43ab173d5820e6437c474
+        uses: leynos/shared-actions/.github/actions/setup-rust@0606ca899ce2995a0c4bc78e660e80832e6e8855
         with:
           install-mold: 'true'
       # The selection is the baseline every pull request's ratchet is measured
@@ -67,7 +67,7 @@ jobs:
           # linker. Assigning RUSTFLAGS displaces every `rustflags` table in
           # .cargo/config.toml.
           RUSTFLAGS: -D warnings
-        uses: leynos/shared-actions/.github/actions/generate-coverage@6cec89bac47a21cf756d68d638a9a510998e57f8
+        uses: leynos/shared-actions/.github/actions/generate-coverage@0606ca899ce2995a0c4bc78e660e80832e6e8855
         with:
           output-path: lcov.info
           format: lcov
@@ -83,7 +83,7 @@ jobs:
       # what stops a dispatch from a branch uploading that branch's coverage.
       - name: Upload coverage data to CodeScene
         if: steps.codescene-token.outputs.available == 'true' && github.ref == 'refs/heads/main'
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@6cec89bac47a21cf756d68d638a9a510998e57f8
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@0606ca899ce2995a0c4bc78e660e80832e6e8855
         with:
           path: lcov.info
           format: lcov
