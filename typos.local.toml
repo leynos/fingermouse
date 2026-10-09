@@ -16,6 +16,8 @@ ignore = [
   # The documentation style guide's own example of keeping US spelling when
   # it names an API. The shared dictionary no longer masks code spans.
   '`color`',
+  # The mold linker, named in the build standard section of the developers' guide.
+  '\bmold\b',
 ]
 
 [files]
