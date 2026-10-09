@@ -31,6 +31,14 @@ own `RUSTFLAGS`) and for each coverage and release target on a Linux host, and
 the `setup-rust` steps of the CI workflows (each must pass `install-mold`), so
 a flag lost through a recipe or workflow edit fails there. The decision is
 recorded in [ADR 001](adr-001-rust-build-standard.md).
+`tests/workflow_contracts/test_release_flags_contract.py` holds the release
+builds and the lint commands. It reads `release.yml` as YAML and requires each
+of its five release builds to assign its own value: a hosted-runner build
+assigns `RUSTFLAGS: -D warnings` in its own `env:` block, and a build inside a
+BSD VM, whose packaged Rust is stable, assigns an empty `RUSTFLAGS` on the
+command line, so the nightly-only flags in `.cargo/config.toml` never reach a
+release. It also reads `make -n lint` and requires the Clippy and Whitaker
+commands each to keep `-D warnings`.
 
 ### Cranelift
 
