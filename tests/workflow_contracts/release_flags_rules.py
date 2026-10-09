@@ -34,6 +34,19 @@ EXPECTED_BUILDS: typ.Final[int] = 5
 EMPTY_ASSIGNMENT: typ.Final[re.Pattern[str]] = re.compile(r"""^RUSTFLAGS=(?:''|"")\s""")
 
 
+class Build(typ.NamedTuple):
+    """One release build command, with where it sits."""
+
+    job_id: str
+    step: Step
+    line: str
+    in_vm: bool
+
+    def where(self) -> str:
+        """Return the build's place, for a message."""
+        return f"{RELEASE}: job {self.job_id!r}, step {self.step.get('name', '<unnamed>')!r}"
+
+
 def _steps(document: Document) -> list[tuple[str, Step]]:
     """Return every step of every job as `(job id, step)`."""
     jobs = document.get("jobs")
@@ -61,6 +74,32 @@ def _commands(step: Step) -> list[tuple[str, bool]]:
     ]
 
 
+def _builds(document: Document) -> list[Build]:
+    """Return every release build command in the workflow."""
+    return [
+        Build(job_id, step, line, in_vm)
+        for job_id, step in _steps(document)
+        for line, in_vm in _commands(step)
+        if BUILD.search(line)
+    ]
+
+
+def _vm_problem(build: Build) -> str | None:
+    """Return the complaint about a VM build that assigns no empty `RUSTFLAGS`."""
+    if EMPTY_ASSIGNMENT.match(build.line):
+        return None
+    return f"{build.where()} builds in a VM without an empty RUSTFLAGS: {build.line}"
+
+
+def _hosted_problem(build: Build) -> str | None:
+    """Return the complaint about a hosted build that does not assign the deny itself."""
+    env = build.step.get("env")
+    value = env.get("RUSTFLAGS") if isinstance(env, dict) else None
+    if value == HOSTED_VALUE:
+        return None
+    return f"{build.where()} assigns RUSTFLAGS={value!r}, not {HOSTED_VALUE!r}"
+
+
 def release_build_violations(documents: dict[str, Document]) -> list[str]:
     """List every way the release workflow's builds miss the platform linker.
 
@@ -79,29 +118,12 @@ def release_build_violations(documents: dict[str, Document]) -> list[str]:
     document = documents.get(RELEASE)
     if document is None:
         return [f"{RELEASE} is not among the workflows"]
-    problems: list[str] = []
-    found = 0
-    for job_id, step in _steps(document):
-        for line, in_vm in _commands(step):
-            if not BUILD.search(line):
-                continue
-            found += 1
-            where = f"{RELEASE}: job {job_id!r}, step {step.get('name', '<unnamed>')!r}"
-            if in_vm:
-                if not EMPTY_ASSIGNMENT.match(line):
-                    problems.append(
-                        f"{where} builds in a VM without an empty RUSTFLAGS: {line}"
-                    )
-                continue
-            env = step.get("env")
-            value = env.get("RUSTFLAGS") if isinstance(env, dict) else None
-            if value != HOSTED_VALUE:
-                problems.append(
-                    f"{where} assigns RUSTFLAGS={value!r}, not {HOSTED_VALUE!r}"
-                )
-    if found != EXPECTED_BUILDS:
+    builds = _builds(document)
+    judged = (_vm_problem(b) if b.in_vm else _hosted_problem(b) for b in builds)
+    problems = [problem for problem in judged if problem]
+    if len(builds) != EXPECTED_BUILDS:
         problems.append(
-            f"{RELEASE}: expected {EXPECTED_BUILDS} release builds, found {found}"
+            f"{RELEASE}: expected {EXPECTED_BUILDS} release builds, found {len(builds)}"
         )
     return problems
 
