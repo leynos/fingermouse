@@ -8,7 +8,7 @@ passes a lone gap in a large repository), and CI must have uv before it runs
 target against a stub tool, so a deleted flag, a dropped prerequisite or a
 guard that stops failing breaks a test rather than silently restoring the gap.
 
-Run via ``make test-workflow-contracts``.
+Run via ``make workflow-contracts``.
 """
 
 from __future__ import annotations
@@ -84,6 +84,8 @@ def test_the_tool_is_pinned_and_run_through_uv() -> None:
     assert _variable("INTERROGATE_VERSION") == "1.7.0"
     command = _variable("INTERROGATE")
     assert re.search(r"(\$\(UV\)|\buv) tool run\b", command), "run via uv tool run"
+    if re.search(r"^UV\s*[:?]?=", _makefile_text(), re.MULTILINE):
+        assert "$(UV) tool run" in command, "honour the configured $(UV) executable"
     assert "--from 'interrogate==$(INTERROGATE_VERSION)'" in command
 
 

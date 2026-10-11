@@ -64,7 +64,7 @@ INTERROGATE_TARGETS ?= scripts tests
 # Level 2 prints a MISSED row per undocumented definition, which the
 # `interrogate` target fails on: the rounded percentage alone passes a lone gap.
 INTERROGATE_FLAGS ?= -vv --fail-under 100
-INTERROGATE = uv tool run \
+INTERROGATE = $(UV) tool run \
 	--from 'interrogate==$(INTERROGATE_VERSION)' interrogate
 
 # Interrogate rounds its percentage to one decimal, so `--fail-under 100` alone
