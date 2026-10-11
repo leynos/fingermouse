@@ -91,7 +91,8 @@ directories.
 Fast feedback is available through:
 
 - `cargo fmt` for formatting checks.
-- `make lint` for linting, which runs Clippy
+- `make lint` for linting, which first runs `make interrogate` (Python docstring
+  coverage over `scripts` and `tests`; it needs `uv`) and then runs Clippy
   (`cargo clippy --all-targets --all-features -- -D warnings`) followed by the
   [Whitaker](https://github.com/leynos/whitaker) Dylint suite with warnings
   denied.

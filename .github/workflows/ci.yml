@@ -44,6 +44,12 @@ jobs:
         run: make workflow-contracts
       - name: Install the Whitaker Dylint suite
         uses: leynos/shared-actions/.github/actions/install-whitaker@2ddf19b3fd52c0f1089db0d57b015f859b80ab67
+      - name: Install uv for the docstring-coverage gate
+        # `make lint` runs interrogate through `uv tool run`.
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          # Some repositories hold each cached path to exactly one owner; this step only needs the binary.
+          enable-cache: false
       - name: Lint
         run: make lint
       # Coverage here serves the local ratchet and nothing else: the report is
