@@ -134,7 +134,11 @@ project:
     `cargo install --locked mdtablefix@0.6.1`), the version CI pins. `make fmt`
     rewrites the same files with `mdtablefix --in-place` and then runs
     `markdownlint-cli2 --fix`.
-  - `make lint` executes:
+  - `make lint` first runs `make interrogate`, which needs `uv` and fails on any
+    Python definition under `scripts` and `tests` without a docstring (and on
+    any `MISSED` row, since interrogate rounds its percentage to one decimal;
+    `tests/workflow_contracts/interrogate_gate_test.py` asserts the wiring), and
+    then executes:
 
     ```sh
     cargo clippy --workspace --all-targets --all-features -- -D warnings
