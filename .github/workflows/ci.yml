@@ -46,7 +46,7 @@ jobs:
         uses: leynos/shared-actions/.github/actions/install-whitaker@5a99aed78ce68dcebd3052b75c31e6f173162b1e
       - name: Install uv for the docstring-coverage gate
         # `make lint` runs interrogate through `uv tool run`.
-        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           # Some repositories hold each cached path to exactly one owner; this step only needs the binary.
           enable-cache: false
