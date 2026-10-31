@@ -61,6 +61,8 @@ runs under the toolchain its installer manages, so it takes none of the
 development standard (no parallel frontend, no `mold` linker flag and no
 inherited `RUSTFLAGS`). The build-standard contract reads that isolated command
 as exempt from the restatement clauses, and ADR 001 records the exception.
+`tests/whitaker_isolation_contract.rs` reads the real `make -n lint` output and
+fails unless Whitaker assigns the literal `RUSTFLAGS="-D warnings"`.
 
 ### Cranelift
 

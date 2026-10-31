@@ -82,10 +82,6 @@ async fn spawn_metrics_endpoint(
     })
 }
 
-#[expect(
-    clippy::integer_division_remainder_used,
-    reason = "tokio::select! macro expands to `%` operations internally"
-)]
 async fn run_metrics_server(
     listener: TcpListener,
     handle: PrometheusHandle,
