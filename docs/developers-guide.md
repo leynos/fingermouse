@@ -56,13 +56,15 @@ the repository's own `[profile.dev]` table and Cargo configuration.
 
 ### Whitaker isolation
 
-`make lint` runs Whitaker with the literal `RUSTFLAGS="-D warnings"`. Whitaker
-runs under the toolchain its installer manages, so it takes none of the
-development standard (no parallel frontend, no `mold` linker flag and no
-inherited `RUSTFLAGS`). The build-standard contract reads that isolated command
-as exempt from the restatement clauses, and ADR 001 records the exception.
-`tests/whitaker_isolation_contract.rs` reads the real `make -n lint` output and
-fails unless Whitaker assigns the literal `RUSTFLAGS="-D warnings"`.
+`make lint` runs Whitaker with the literal `RUSTFLAGS="-D warnings"`, after
+clearing an inherited `CARGO_ENCODED_RUSTFLAGS`, which Cargo ranks above
+`RUSTFLAGS`. Whitaker runs under the toolchain its installer manages, so it
+takes none of the development standard (no parallel frontend, no `mold` linker
+flag and no inherited `RUSTFLAGS`). The build-standard contract reads that
+isolated command as exempt from the restatement clauses, and ADR 001 records
+the exception. `tests/whitaker_isolation_contract.rs` reads the real
+`make -n lint` output and fails unless Whitaker clears the encoded flags and
+assigns the literal `RUSTFLAGS="-D warnings"`.
 
 ### Cranelift
 

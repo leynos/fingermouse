@@ -68,11 +68,11 @@ installer-managed Whitaker route as its own boundary: Whitaker runs under the
 toolchain its installer manages, not this repository's pin, so it takes none of
 the development standard.
 
-- `make lint` runs
-  `RUSTFLAGS="-D warnings" $(WHITAKER) --all -- --all-targets --all-features`.
-  The literal `RUSTFLAGS` displaces the `rustflags` sources, so Whitaker gets
-  no parallel frontend flag and no `mold` linker flag, and it inherits nothing
-  from the caller.
+- `make lint` clears an inherited `CARGO_ENCODED_RUSTFLAGS`, which Cargo ranks
+  above `RUSTFLAGS`, then runs Whitaker with the literal
+  `RUSTFLAGS="-D warnings"`. The literal `RUSTFLAGS` displaces the `rustflags`
+  sources, so Whitaker gets no parallel frontend flag and no `mold` linker
+  flag, and it inherits nothing from the caller.
 - Consequence: Whitaker links with the platform linker, and a caller's
   `RUSTFLAGS` no longer reaches it.
 - `tests/build_standard_support/make.rs` reads an isolated Whitaker command as

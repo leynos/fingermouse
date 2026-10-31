@@ -81,10 +81,11 @@ interrogate: ## Enforce complete Python docstring coverage
 
 # Whitaker runs under the toolchain its installer manages, so it takes none of
 # the development standard: its literal `RUSTFLAGS` displaces the `rustflags`
-# tables (no frontend flag, no `mold`) and inherits nothing from the caller.
+# tables (no frontend flag, no `mold`) and inherits nothing from the caller. An
+# inherited `CARGO_ENCODED_RUSTFLAGS` outranks `RUSTFLAGS`, so it is cleared first.
 lint: interrogate ## Run Clippy and the Whitaker Dylint suite with warnings denied
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(STANDARD_RUSTFLAGS)" $(CARGO) clippy --all-targets --all-features -- -D warnings
-	RUSTFLAGS="-D warnings" $(WHITAKER) --all -- --all-targets --all-features
+	unset CARGO_ENCODED_RUSTFLAGS && RUSTFLAGS="-D warnings" $(WHITAKER) --all -- --all-targets --all-features
 
 typecheck: ## Run cargo check for fast no-link verification
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(STANDARD_RUSTFLAGS)" $(CARGO) check --all-targets $(BUILD_JOBS)
