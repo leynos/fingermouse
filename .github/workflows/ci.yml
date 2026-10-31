@@ -43,7 +43,7 @@ jobs:
       - name: Workflow contracts
         run: make workflow-contracts
       - name: Install the Whitaker Dylint suite
-        uses: leynos/shared-actions/.github/actions/install-whitaker@6e99f225cb06684f9e6f89b63a7ca4a04095c067
+        uses: leynos/shared-actions/.github/actions/install-whitaker@5a99aed78ce68dcebd3052b75c31e6f173162b1e
       - name: Install uv for the docstring-coverage gate
         # `make lint` runs interrogate through `uv tool run`.
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
