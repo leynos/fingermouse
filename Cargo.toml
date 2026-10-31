@@ -24,11 +24,19 @@ cap-std = "4.0.2"
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
+cap-std = { version = "4.0.2", features = ["fs_utf8"] }
 predicates = "3.1.0"
 rstest = "0.28.0"
 tempfile = "3.10.1"
 third-wheel = "0.2.0"
 portpicker = "0.1.1"
+
+# Development builds keep neither incremental state nor debug information (rule
+# `rust-dev-build-footprint`, DF-001 and DF-002). Set CARGO_PROFILE_DEV_DEBUG=true
+# to debug, or CARGO_INCREMENTAL=1 to rebuild incrementally.
+[profile.dev]
+incremental = false
+debug = 0
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }

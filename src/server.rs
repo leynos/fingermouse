@@ -315,7 +315,7 @@ mod tests {
                 let profile = build_profile("alice")?;
                 let record = UserRecord {
                     profile,
-                    plan: case.plan.map(str::to_string),
+                    plan: case.plan.map(str::to_owned),
                 };
                 Arc::new(StaticStore {
                     record: Some(record),

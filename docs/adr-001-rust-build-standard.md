@@ -58,3 +58,26 @@ the workflows, so a flag lost through a recipe or workflow edit fails there.
 - A change to a recipe or workflow step that assigns `RUSTFLAGS` must restate
   the flags, and the contract says which clause fails when it does not.
 - Revisit Cranelift when the toolchain or the failing tests change.
+
+## Addendum, 2026-10-31: Whitaker is isolated from the standard
+
+The decision above says the Makefile composes the standard flags into each
+development recipe. That holds for Cargo gate builds, and no longer for
+Whitaker. The Concordat `rust-build-defaults` rule (BD-008) reads a direct
+installer-managed Whitaker route as its own boundary: Whitaker runs under the
+toolchain its installer manages, not this repository's pin, so it takes none of
+the development standard.
+
+- `make lint` clears an inherited `CARGO_ENCODED_RUSTFLAGS`, which Cargo ranks
+  above `RUSTFLAGS`, then runs Whitaker with the literal
+  `RUSTFLAGS="-D warnings"`. The literal `RUSTFLAGS` displaces the `rustflags`
+  sources, so Whitaker gets no parallel frontend flag and no `mold` linker
+  flag, and it inherits nothing from the caller.
+- Consequence: Whitaker links with the platform linker, and a caller's
+  `RUSTFLAGS` no longer reaches it.
+- `tests/build_standard_support/make.rs` reads an isolated Whitaker command as
+  exempt from the restatement clauses.
+- The development profile now sets `incremental = false` and `debug = 0`, and
+  `.cargo/config.toml` the native `[unstable] embed-metadata = false` key for
+  the dated nightly (the `rust-dev-build-footprint` rule), described in the
+  developers' guide.
