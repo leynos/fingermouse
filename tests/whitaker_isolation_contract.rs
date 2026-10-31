@@ -7,6 +7,8 @@
 
 use std::process::Command;
 
+use rstest::rstest;
+
 /// Returns the `make -n lint` line that runs Whitaker.
 fn whitaker_line() -> Result<String, String> {
     let output = Command::new("make")
@@ -62,23 +64,18 @@ fn make_lint_isolates_whitaker_with_the_literal_rustflags() -> Result<(), String
 /// Scenario: Whitaker commands that assign no, inherited or development `RUSTFLAGS`.
 ///
 /// Invariant: only the literal warning-only assignment passes.
-#[test]
-fn a_whitaker_command_without_the_literal_rustflags_is_reported() -> Result<(), String> {
-    let accepted = ["RUSTFLAGS=\"-D warnings\" whitaker --all -- --all-targets"];
-    let rejected = [
-        "whitaker --all",
-        "RUSTFLAGS=\"-D warnings -Zthreads=8\" whitaker --all",
-        "RUSTFLAGS=\"$RUSTFLAGS -D warnings\" whitaker --all",
-    ];
-    for line in accepted {
-        if !isolation_problems(line).is_empty() {
-            return Err(format!("must pass: {line}"));
-        }
+#[rstest]
+#[case::literal("RUSTFLAGS=\"-D warnings\" whitaker --all -- --all-targets", true)]
+#[case::none("whitaker --all", false)]
+#[case::development_flags("RUSTFLAGS=\"-D warnings -Zthreads=8\" whitaker --all", false)]
+#[case::inherited("RUSTFLAGS=\"$RUSTFLAGS -D warnings\" whitaker --all", false)]
+fn only_the_literal_rustflags_isolate_whitaker(
+    #[case] line: &str,
+    #[case] isolated: bool,
+) -> Result<(), String> {
+    if isolation_problems(line).is_empty() == isolated {
+        Ok(())
+    } else {
+        Err(format!("isolated should be {isolated}: {line}"))
     }
-    for line in rejected {
-        if isolation_problems(line).is_empty() {
-            return Err(format!("must be reported: {line}"));
-        }
-    }
-    Ok(())
 }
