@@ -222,9 +222,9 @@ project:
     without modifying files. The Markdown check needs mdtablefix 0.6.0 or later
     on `PATH`; CI installs 0.6.1. Install it with
     `cargo binstall --no-confirm mdtablefix@0.6.1` (or
-    `cargo install --locked mdtablefix@0.6.1`). `make fmt` rewrites the same
-    files with `cargo fmt --all`, `mdtablefix --in-place`, and
-    `markdownlint-cli2 --fix`.
+    `cargo install --locked mdtablefix@0.6.1`). `make fmt` runs
+    `cargo fmt --all`, then `mdtablefix --in-place` on the same file selection
+    as the check, and then `markdownlint-cli2 --fix` on `**/*.md`.
   - `make lint` first runs `make interrogate`, which needs `uv` and fails on any
     Python definition under `scripts` and `tests` without a docstring (and on
     any `MISSED` row, since interrogate rounds its percentage to one decimal;
