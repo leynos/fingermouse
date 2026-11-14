@@ -73,12 +73,14 @@ environment, the test targets do not link. `mold` reports undefined
 `aws_lc_0_42_0_*` symbols from `aws-lc-rs`. The failure reproduces on a fresh
 target directory, and the same tree links and builds every test target under
 LLVM (`cargo test --no-run` succeeds). No test ran, so the suite itself is
-unmeasured under Cranelift. Revisit when `aws-lc-sys` links under Cranelift,
-and re-measure the whole suite then.
+unmeasured under Cranelift. Recheck the link when the toolchain pin or the
+`aws-lc-sys` version changes, and re-measure the whole suite once it links.
 
 The release workflow still builds on stable (`cross +stable build --release`,
 plus the macOS, Windows, FreeBSD and OpenBSD legs). That is not the basis of
-the exception, but it remains a constraint for any later move: stable Cargo
-refuses a `[profile.dev] codegen-backend` key, so the release would first have
-to build on the pinned nightly. Its `RUSTFLAGS` assignment keeps the
-nightly-only `-Zthreads` flag from reaching it.
+the exception. It matters only if the backend is later selected in
+`.cargo/config.toml`, which the release also reads: stable Cargo refuses a
+`[profile.dev] codegen-backend` key, so the release would then first have to
+build on the pinned nightly. Selecting the backend through the environment, for
+development runs alone, would leave that configuration unchanged. The release's
+`RUSTFLAGS` assignment keeps the nightly-only `-Zthreads` flag from reaching it.
