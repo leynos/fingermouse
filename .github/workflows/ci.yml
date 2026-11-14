@@ -68,4 +68,8 @@ jobs:
           output-path: lcov.info
           format: lcov
           with-ratchet: 'true'
+          # A new path starts a new baseline: the cache entry's version hashes
+          # this path, so the restore misses the stored 58.63%, which main's own
+          # code does not measure (57.61%), and the committed file sets it.
+          baseline-rust-file: .coverage-baseline-v2.rust
           publish-artefact: 'false'
