@@ -72,6 +72,8 @@ jobs:
           output-path: lcov.info
           format: lcov
           with-ratchet: 'true'
+          # Same new baseline path as ci.yml, so main publishes to it.
+          baseline-rust-file: .coverage-baseline-v2.rust
       # Actions evaluates the expression before the shell runs, so this writes
       # `available=true` or `available=false` and binds the token nowhere. A
       # fork without the secret skips the upload rather than failing.
