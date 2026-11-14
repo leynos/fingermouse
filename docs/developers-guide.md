@@ -67,13 +67,18 @@ assigns the literal `RUSTFLAGS="-D warnings"`.
 
 ### Cranelift
 
-Exception: Cranelift is not the development-profile backend. The repository pins
-`nightly-2026-10-30` (no Cranelift measurement was taken on it, and the
-exception has no deferral date: it holds while the release workflow builds on
-stable), but the release workflow (`cross +stable build --release`, plus the
-macOS, Windows, FreeBSD and OpenBSD legs, which build on stable) builds on a
-stable toolchain against `.cargo/config.toml`, and stable Cargo refuses a
-`[profile.dev] codegen-backend` key ("config profile `dev` is not valid"), so
-selecting the backend would break that build (recorded 2026-09-29). That build
-assigns `RUSTFLAGS`, so the nightly-only `-Zthreads` flag never reaches it.
-Revisit if that build moves to the pinned nightly.
+Exception: Cranelift is not the development-profile backend. Measured on the
+pinned `nightly-2026-11-10` on 2026-11-13: with Cranelift selected through the
+environment, the test targets do not link. `mold` reports undefined
+`aws_lc_0_42_0_*` symbols from `aws-lc-rs`. The failure reproduces on a fresh
+target directory, and the same tree links and builds every test target under
+LLVM (`cargo test --no-run` succeeds). No test ran, so the suite itself is
+unmeasured under Cranelift. Revisit when `aws-lc-sys` links under Cranelift,
+and re-measure the whole suite then.
+
+The release workflow still builds on stable (`cross +stable build --release`,
+plus the macOS, Windows, FreeBSD and OpenBSD legs). That is not the basis of
+the exception, but it remains a constraint for any later move: stable Cargo
+refuses a `[profile.dev] codegen-backend` key, so the release would first have
+to build on the pinned nightly. Its `RUSTFLAGS` assignment keeps the
+nightly-only `-Zthreads` flag from reaching it.
