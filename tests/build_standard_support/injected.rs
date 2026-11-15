@@ -156,6 +156,17 @@ fn the_development_policy_runs_against_an_injected_runner() -> Result<(), String
 fn a_development_command_without_an_assignment_is_refused_and_an_exempt_one_is_not()
 -> Result<(), String> {
     let pin = Pin::Nightly;
+    ensure_bare_commands_refused(pin)?;
+    ensure_chained_bare_command_refused(pin)?;
+    let (exempt, exempt_read) = development_problems(exempt_commands_make, Host::Linux, pin)?;
+    ensure(
+        exempt.is_empty() && exempt_read > 0,
+        &format!("a formatter, probe or doc build raised {exempt:?}"),
+    )
+}
+
+/// Checks that a test command and lint commands that assign no `RUSTFLAGS` are refused.
+fn ensure_bare_commands_refused(pin: Pin) -> Result<(), String> {
     let (bare_test, _) = development_problems(bare_test_make, Host::Linux, pin)?;
     ensure(
         !bare_test.is_empty(),
@@ -165,19 +176,18 @@ fn a_development_command_without_an_assignment_is_refused_and_an_exempt_one_is_n
     ensure(
         !bare_lint.is_empty(),
         "lint commands that assign no RUSTFLAGS passed",
-    )?;
+    )
+}
+
+/// Checks that a bare command chained beside an assigning probe is refused, and only that one.
+fn ensure_chained_bare_command_refused(pin: Pin) -> Result<(), String> {
     let (chained, _) = development_problems(chained_bare_make, Host::Linux, pin)?;
+    let all_name_the_bare_command = chained
+        .iter()
+        .all(|problem| problem.contains("nextest run"));
     ensure(
-        !chained.is_empty()
-            && chained
-                .iter()
-                .all(|problem| problem.contains("nextest run")),
+        !chained.is_empty() && all_name_the_bare_command,
         &format!("a bare command chained beside an assigning probe raised {chained:?}"),
-    )?;
-    let (exempt, exempt_read) = development_problems(exempt_commands_make, Host::Linux, pin)?;
-    ensure(
-        exempt.is_empty() && exempt_read > 0,
-        &format!("a formatter, probe or doc build raised {exempt:?}"),
     )
 }
 
@@ -300,6 +310,21 @@ fn a_release_command_is_accepted_only_when_it_keeps_the_callers_rustflags() -> R
 /// runner error reaches the caller.
 #[test]
 fn the_held_out_policy_runs_against_an_injected_runner() -> Result<(), String> {
+    ensure_runner_errors_and_assigned_commands()?;
+    ensure_exempt_held_out_commands_pass()?;
+    let (unassigned, _) = held_out_problems_for(held_out_unassigned_make, &["synthetic"])?;
+    ensure(
+        !unassigned.is_empty(),
+        "a held-out command that assigns no RUSTFLAGS passed",
+    )?;
+    ensure(
+        held_out_target_count() == 0 || held_out_problems(undefined_make).is_err(),
+        "the listed held-out targets were not run",
+    )
+}
+
+/// Checks that a runner error reaches the caller and an assigning command raises nothing.
+fn ensure_runner_errors_and_assigned_commands() -> Result<(), String> {
     ensure(
         held_out_problems_for(undefined_make, &["synthetic"]).is_err(),
         "a held-out runner error was swallowed",
@@ -308,7 +333,11 @@ fn the_held_out_policy_runs_against_an_injected_runner() -> Result<(), String> {
     ensure(
         clean.is_empty() && read == 1,
         &format!("an assigning held-out command raised {clean:?}"),
-    )?;
+    )
+}
+
+/// Checks that a measuring coverage build and an inspection command raise nothing.
+fn ensure_exempt_held_out_commands_pass() -> Result<(), String> {
     let (measuring, _) = held_out_problems_for(release_clearing_make, &["coverage"])?;
     ensure(
         measuring.is_empty(),
@@ -318,15 +347,6 @@ fn the_held_out_policy_runs_against_an_injected_runner() -> Result<(), String> {
     ensure(
         inspecting.is_empty(),
         &format!("an inspection command in a held-out target raised {inspecting:?}"),
-    )?;
-    let (unassigned, _) = held_out_problems_for(held_out_unassigned_make, &["synthetic"])?;
-    ensure(
-        !unassigned.is_empty(),
-        "a held-out command that assigns no RUSTFLAGS passed",
-    )?;
-    ensure(
-        held_out_target_count() == 0 || held_out_problems(undefined_make).is_err(),
-        "the listed held-out targets were not run",
     )
 }
 
