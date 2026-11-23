@@ -238,7 +238,7 @@ project:
 
     Clippy runs with the development build standard appended to any inherited
     `RUSTFLAGS`: `-Zthreads=8`, and `-Clink-arg=-fuse-ld=mold` on Linux (see
-    [ADR-001](docs/adr-001-rust-build-standard.md)). Whitaker runs with
+    [ADR-001](docs/adrs/adr-0001-rust-build-standard.md)). Whitaker runs with
     `RUSTFLAGS="-D warnings"` and without those flags, because its installer
     manages its toolchain. Clippy warnings and Whitaker findings fail the
     command.

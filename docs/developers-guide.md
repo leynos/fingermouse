@@ -30,7 +30,7 @@ development target on a Linux host and a macOS host (each keeping the caller's
 own `RUSTFLAGS`) and for each coverage and release target on a Linux host, and
 the `setup-rust` steps of the CI workflows (each must pass `install-mold`), so
 a flag lost through a recipe or workflow edit fails there. The decision is
-recorded in [ADR 001](adr-001-rust-build-standard.md).
+recorded in [ADR 001](adrs/adr-0001-rust-build-standard.md).
 `tests/workflow_contracts/test_release_flags_contract.py` holds the release
 builds and the lint commands. It reads `release.yml` as YAML and requires each
 of its five release builds to assign its own value: a hosted-runner build
