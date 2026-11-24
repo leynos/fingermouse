@@ -473,9 +473,9 @@ project:
 
 ## Spelling
 
-- `make spelling` runs `scripts/generate_typos_config.py`, which regenerates
-  `typos.toml` from the shared en-GB-oxendict dictionary and
-  `typos.local.toml`, then runs `typos` over the Markdown files Git tracks.
+- `make spelling` runs the pinned `typos-config-builder gate`, which
+  regenerates `typos.toml` from the shared en-GB-oxendict dictionary and
+  `typos.local.toml`, then checks spelling and the shared phrase corrections.
 - `typos.toml` is generated: never edit it by hand. Put narrow
   repository-specific exceptions in `typos.local.toml`, as exact or full-line
   patterns rather than bare accepted words.
