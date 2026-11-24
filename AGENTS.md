@@ -226,7 +226,7 @@ project:
     `cargo fmt --all`, then `mdtablefix --in-place` on the same file selection
     as the check, and then `markdownlint-cli2 --fix` on `**/*.md`.
   - `make lint` first runs `make interrogate`, which needs `uv` and fails on any
-    Python definition under `scripts` and `tests` without a docstring (and on
+    Python definition under `tests` without a docstring (and on
     any `MISSED` row, since interrogate rounds its percentage to one decimal;
     `tests/workflow_contracts/interrogate_gate_test.py` asserts the wiring). It
     then runs Clippy and Whitaker:
