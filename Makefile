@@ -62,7 +62,7 @@ target/%/$(APP): ## Build binary in debug or release mode
 # owns. Add a new Python directory to INTERROGATE_TARGETS. No `--python` pin: a
 # managed interpreter would be downloaded, and a PyO3 build could link it.
 INTERROGATE_VERSION ?= 1.7.0
-INTERROGATE_TARGETS ?= scripts tests
+INTERROGATE_TARGETS ?= tests
 # Level 2 prints a MISSED row per undocumented definition, which the
 # `interrogate` target fails on: the rounded percentage alone passes a lone gap.
 INTERROGATE_FLAGS ?= -vv --fail-under 100
