@@ -53,6 +53,14 @@ flags are used, and the pin is not moved to suit the key.
 `tests/build_footprint_contract.rs` holds all three settings and reads them by
 parsing the repository's own configuration. It starts no Cargo process.
 
+Cognitive complexity is not gated by Clippy. Clippy's `cognitive_complexity`
+scores code after macro expansion, so it counts branching a macro generated,
+and neither `Cargo.toml` nor `clippy.toml` enables it. Whitaker's experimental
+`macro_aware_cognitive_complexity` gates it at `max_complexity = 9`,
+CodeScene's ceiling. `dylint.toml` opts in with
+`[whitaker] experimental = ["macro_aware_cognitive_complexity"]`. Fix a finding
+by extracting named helpers, never by raising the threshold.
+
 ### Whitaker isolation
 
 `make lint` runs Whitaker with the literal `RUSTFLAGS="-D warnings"`, after
