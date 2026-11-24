@@ -8,7 +8,7 @@ MDTABLEFIX_SELECT = --git --include-untracked
 MDTABLEFIX_RULES = --wrap --renumber --breaks --ellipsis --fences
 
 .PHONY: help all clean test build release lint fmt check-fmt typecheck \
-	markdownlint nixie spelling spelling-helper-test workflow-contracts interrogate
+	markdownlint nixie spelling workflow-contracts interrogate
 
 APP ?= fingermouse
 CARGO ?= cargo
@@ -29,8 +29,10 @@ CV005_CONTRACTS = $(UV_ENV) $(UV) tool run --python 3.13 \
 	cv005-contracts
 
 RUFF_VERSION ?= 0.15.12
-TYPOS_VERSION ?= 1.48.0
-TYPOS = $(UV) tool run typos@$(TYPOS_VERSION)
+TYPOS_CONFIG_BUILDER_VERSION ?= v0.1.4
+TYPOS_CONFIG_BUILDER = $(UV_ENV) $(UV) tool run --python 3.14 --from \
+	"git+https://github.com/leynos/typos-config-builder.git@$(TYPOS_CONFIG_BUILDER_VERSION)" \
+	typos-config-builder
 WORKFLOW_CONTRACTS = tests/workflow_contracts
 
 # The development build standard (concordat rule `rust-build-defaults`):
@@ -60,7 +62,7 @@ target/%/$(APP): ## Build binary in debug or release mode
 # owns. Add a new Python directory to INTERROGATE_TARGETS. No `--python` pin: a
 # managed interpreter would be downloaded, and a PyO3 build could link it.
 INTERROGATE_VERSION ?= 1.7.0
-INTERROGATE_TARGETS ?= scripts tests
+INTERROGATE_TARGETS ?= tests
 # Level 2 prints a MISSED row per undocumented definition, which the
 # `interrogate` target fails on: the rounded percentage alone passes a lone gap.
 INTERROGATE_FLAGS ?= -vv --fail-under 100
@@ -102,26 +104,8 @@ check-fmt: ## Verify formatting
 markdownlint: spelling ## Lint Markdown files and enforce repository spelling
 	$(MDLINT) '**/*.md'
 
-spelling: spelling-helper-test ## Enforce en-GB-oxendict spelling in Markdown prose
-	@$(UV_ENV) $(UV) run scripts/generate_typos_config.py
-	@git ls-files -z '*.md' | \
-		xargs -0 -r env $(UV_ENV) $(TYPOS) --config typos.toml --force-exclude
-
-spelling-helper-test: ## Validate the shared spelling-policy integration
-	@$(UV_ENV) $(UV) tool run ruff@$(RUFF_VERSION) format --isolated \
-		--target-version py313 --check scripts/generate_typos_config.py \
-		scripts/typos_rollout.py scripts/typos_rollout_cache.py \
-		scripts/tests/test_typos_rollout.py
-	@$(UV_ENV) $(UV) tool run ruff@$(RUFF_VERSION) check --isolated \
-		--target-version py313 scripts/generate_typos_config.py \
-		scripts/typos_rollout.py scripts/typos_rollout_cache.py \
-		scripts/tests/test_typos_rollout.py
-	@PYTHONPATH=scripts $(UV_ENV) $(UV) run --no-project --python 3.13 \
-		--with pytest==9.0.2 --with pytest-cov==7.0.0 \
-		python -m pytest scripts/tests/test_typos_rollout.py \
-		-c /dev/null --rootdir=. -p no:cacheprovider \
-		--cov=generate_typos_config --cov=typos_rollout \
-		--cov=typos_rollout_cache --cov-fail-under=90
+spelling: ## Enforce en-GB-oxendict spelling in prose
+	$(TYPOS_CONFIG_BUILDER) gate --repository .
 
 workflow-contracts: ## Check the CV-005 CodeScene workflow contract
 	$(CV005_CONTRACTS) check --repository .

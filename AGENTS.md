@@ -226,7 +226,7 @@ project:
     `cargo fmt --all`, then `mdtablefix --in-place` on the same file selection
     as the check, and then `markdownlint-cli2 --fix` on `**/*.md`.
   - `make lint` first runs `make interrogate`, which needs `uv` and fails on any
-    Python definition under `scripts` and `tests` without a docstring (and on
+    Python definition under `tests` without a docstring (and on
     any `MISSED` row, since interrogate rounds its percentage to one decimal;
     `tests/workflow_contracts/interrogate_gate_test.py` asserts the wiring). It
     then runs Clippy and Whitaker:
@@ -473,9 +473,9 @@ project:
 
 ## Spelling
 
-- `make spelling` runs `scripts/generate_typos_config.py`, which regenerates
-  `typos.toml` from the shared en-GB-oxendict dictionary and
-  `typos.local.toml`, then runs `typos` over the Markdown files Git tracks.
+- `make spelling` runs the pinned `typos-config-builder gate`, which
+  regenerates `typos.toml` from the shared en-GB-oxendict dictionary and
+  `typos.local.toml`, then checks spelling and the shared phrase corrections.
 - `typos.toml` is generated: never edit it by hand. Put narrow
   repository-specific exceptions in `typos.local.toml`, as exact or full-line
   patterns rather than bare accepted words.
