@@ -22,14 +22,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends finger
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@29b1772534b37ea996c24a2ccb462e717073155d
+        uses: leynos/shared-actions/.github/actions/setup-rust@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
         with:
           install-mold: 'true'
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
         uses: >-
-          leynos/shared-actions/.github/actions/install-mdtablefix@29b1772534b37ea996c24a2ccb462e717073155d
+          leynos/shared-actions/.github/actions/install-mdtablefix@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
         with:
           version: '0.6.1'
       - name: Format
@@ -43,7 +43,7 @@ jobs:
       - name: Workflow contracts
         run: make workflow-contracts
       - name: Install the Whitaker Dylint suite
-        uses: leynos/shared-actions/.github/actions/install-whitaker@29b1772534b37ea996c24a2ccb462e717073155d
+        uses: leynos/shared-actions/.github/actions/install-whitaker@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
       - name: Install uv for the docstring-coverage gate
         # `make lint` runs interrogate through `uv tool run`.
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
@@ -63,7 +63,7 @@ jobs:
           # linker. Assigning RUSTFLAGS displaces every `rustflags` table in
           # .cargo/config.toml.
           RUSTFLAGS: -D warnings
-        uses: leynos/shared-actions/.github/actions/generate-coverage@29b1772534b37ea996c24a2ccb462e717073155d
+        uses: leynos/shared-actions/.github/actions/generate-coverage@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
         with:
           output-path: lcov.info
           format: lcov
