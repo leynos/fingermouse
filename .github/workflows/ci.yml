@@ -54,6 +54,8 @@ jobs:
         with:
           # Some repositories hold each cached path to exactly one owner; this step only needs the binary.
           enable-cache: false
+      - name: Install the YAML lint tools
+        uses: leynos/shared-actions/.github/actions/install-yaml-lint@bd052c68a4792e92c3272fb1b6ea3b594f3ab7f3
       - name: Lint
         run: make lint
       # Coverage here serves the local ratchet and nothing else: the report is
